@@ -20,7 +20,7 @@ const client = new Client({
   partials: [Partials.Channel]
 });
 
-// ===== CONFIGURACIÓN =====
+// ===== CONFIG =====
 const STAFF_ROLE_ID = "1463268597085507717";
 const CLAN_ROLE_ID = "1459687732417921227";
 const CANAL_INICIAL = "1476978880672956428";
@@ -33,6 +33,13 @@ client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
   const canal = await client.channels.fetch(CANAL_INICIAL);
+  const mensajes = await canal.messages.fetch({ limit: 20 });
+
+  const yaExiste = mensajes.find(
+    m => m.author.id === client.user.id && m.components.length > 0
+  );
+
+  if (yaExiste) return; // 👈 evita duplicar botón
 
   const boton = new ButtonBuilder()
     .setCustomId("crear_ticket")
@@ -47,59 +54,47 @@ client.once("ready", async () => {
   });
 });
 
-// =====================================================
-// 🔔 SISTEMA DE AVISOS + RESPUESTA DM
-// =====================================================
-
 client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
 
-  // 💬 RESPUESTA EN PRIVADO
+  // DM
   if (!message.guild) {
-
     const embedDM = new EmbedBuilder()
       .setTitle("🤖 Información del Bot")
-      .setDescription("**Creado por 1fsi**\n\nVenta de bots personalizados.\nEscríbeme al Discord: **1fsi.**")
-      .setColor(0x00AEFF)
-      .setTimestamp();
+      .setDescription("**Creado por 1fsi**\n\nVenta de bots personalizados.\nDiscord: **1fsi**")
+      .setColor(0x00AEFF);
 
     await message.reply({ embeds: [embedDM] });
     return;
   }
 
-  // 🔔 CANAL DE AVISOS
+  // Avisos
   if (message.channel.id === CANAL_AVISOS) {
-
-    const contenido = message.content;
 
     await message.delete().catch(() => {});
 
     const embedAviso = new EmbedBuilder()
       .setTitle("🚨 AVISO IMPORTANTE 🚨")
-      .setDescription(contenido)
+      .setDescription(message.content)
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO)
       .setFooter({ text: `Publicado por ${message.author.tag}` })
       .setTimestamp();
 
-    await message.channel.send({
-      embeds: [embedAviso]
-    });
+    await message.channel.send({ embeds: [embedAviso] });
   }
 });
-
-// ============================
-// INTERACCIONES (TICKETS)
-// ============================
 
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "crear_ticket") {
 
+    const nombreCanal = `verificacion-${interaction.user.id}`;
+
     const existingChannel = interaction.guild.channels.cache.find(
-      channel => channel.name === `verificacion-${interaction.user.username}`
+      c => c.name === nombreCanal
     );
 
     if (existingChannel) {
@@ -110,7 +105,7 @@ client.on("interactionCreate", async (interaction) => {
     }
 
     const canal = await interaction.guild.channels.create({
-      name: `verificacion-${interaction.user.username}`,
+      name: nombreCanal,
       type: ChannelType.GuildText,
       parent: CATEGORIA_TICKETS,
       permissionOverwrites: [
@@ -123,30 +118,20 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(
-`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
+      .setDescription(`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
 
-Buscamos disciplina, constancia y mentalidad de equipo.
-Las solicitudes incompletas serán rechazadas.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👤 Nick:
 🎂 Edad:
 🚻 Sexo:
 🌎 Región / País:
-🎮 Especialidad principal:
-(Constructor, Redstone, PvP, Estratega, Técnico, Explorador, etc.)
-⚔ Nivel aproximado en PvP:
-(Bajo / Medio / Alto / Competitivo)
-(Especificar nombre y rol desempeñado)
-⏳ Años de experiencia en Minecraft:
-⏰ Disponibilidad semanal:
-(Horarios y días activos)
-🎤 ¿Dispones de micrófono y actividad en Discord?
-(Sí / No – Especificar)
+🎮 Especialidad:
+⚔ Nivel PvP:
+🏰 Experiencia:
+⏳ Años jugando:
+⏰ Disponibilidad:
+🎤 Micrófono:
 
-⚠ El ingreso no está garantizado.
-Se evaluará actitud, nivel y compromiso.`)
+⚠ Se evaluará actitud y compromiso.`)
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -160,96 +145,71 @@ Se evaluará actitud, nivel y compromiso.`)
       .setLabel("Rechazar Miembro")
       .setStyle(ButtonStyle.Danger);
 
-    const cerrarTicket = new ButtonBuilder()
+    const cerrar = new ButtonBuilder()
       .setCustomId("cerrar_ticket")
       .setLabel("Cerrar Ticket")
       .setStyle(ButtonStyle.Secondary);
 
-    const filaBotones = new ActionRowBuilder().addComponents(
-      aceptar,
-      rechazar,
-      cerrarTicket
-    );
+    const fila = new ActionRowBuilder().addComponents(aceptar, rechazar, cerrar);
 
-    await canal.send({
-      embeds: [embedFormulario],
-      components: [filaBotones]
-    });
+    await canal.send({ embeds: [embedFormulario], components: [fila] });
 
-    await interaction.reply({
-      content: "✅ Tu ticket fue creado correctamente.",
-      ephemeral: true
-    });
+    await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
   }
 
   if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
-      return interaction.reply({
-        content: "❌ No tienes permisos para usar este botón.",
-        ephemeral: true
-      });
+      return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
     }
 
-    const channelName = interaction.channel.name;
-    const username = channelName.replace("verificacion-", "");
-
-    const members = await interaction.guild.members.fetch();
-    const member = members.find(
-      m => m.user.username === username || m.displayName === username
-    );
+    const userId = interaction.channel.name.replace("verificacion-", "");
+    const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
     if (!member) {
-      return interaction.reply({
-        content: "❌ No se pudo encontrar al usuario.",
-        ephemeral: true
-      });
+      return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
     }
 
-    // ✅ ACEPTAR
     if (interaction.customId === "aceptar_miembro") {
 
       const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
-      if (rol) {
-        await member.roles.add(rol);
-      }
+      if (rol) await member.roles.add(rol);
 
-      const embedAceptado = new EmbedBuilder()
-        .setTitle("✅ Solicitud Aceptada")
-        .setDescription(`¡Felicidades ${member.user.username}! Has sido aceptado en el clan. 🎉`)
-        .setColor(0x00FF00);
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("✅ Aceptado")
+            .setDescription(`Bienvenido ${member.user.username}`)
+            .setColor(0x00FF00)
+        ]
+      });
 
-      await interaction.reply({ embeds: [embedAceptado] });
-
-      await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
+      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
     }
 
-    // ❌ RECHAZAR + BAN 15s
     if (interaction.customId === "rechazar_miembro") {
 
-      const embedRechazado = new EmbedBuilder()
-        .setTitle("❌ Solicitud Rechazada")
-        .setDescription(`No fuiste aceptado por la administración del servidor.
-Serás expulsado del servidor en 15 segundos.`)
-        .setColor(0xFF0000);
-
-      await interaction.reply({ embeds: [embedRechazado] });
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("❌ Rechazado")
+            .setDescription("Serás baneado en 15 segundos.")
+            .setColor(0xFF0000)
+        ]
+      });
 
       setTimeout(async () => {
-        await member.ban({ reason: "Solicitud rechazada por el staff." }).catch(() => {});
+        await member.ban({ reason: "Solicitud rechazada." }).catch(() => {});
       }, 15000);
 
-      await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
+      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
     }
   }
 
   if (interaction.customId === "cerrar_ticket") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
-      return interaction.reply({
-        content: "❌ Este botón es solo para Staff.",
-        ephemeral: true
-      });
+      return interaction.reply({ content: "❌ Solo staff.", ephemeral: true });
     }
 
     await interaction.channel.delete().catch(() => {});
