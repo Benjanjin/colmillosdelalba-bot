@@ -1,14 +1,4 @@
-const {
-  Client,
-  GatewayIntentBits,
-  Partials,
-  ChannelType,
-  PermissionsBitField,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
-  EmbedBuilder
-} = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -39,7 +29,7 @@ const ROLES_REACCIONES = {
   "🏛️": "1464335746856128737"
 };
 
-let mensajeRolesGlobal = null; // ← agregado para control
+let mensajeRolesGlobal = null;
 
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
@@ -89,15 +79,14 @@ client.once("ready", async () => {
     }
   }
 
-  mensajeRolesGlobal = mensajeRoles; // guardamos referencia
+  mensajeRolesGlobal = mensajeRoles;
 });
 
-// ===== REACCIONES (ACTUALIZADO SOLO ESTO) =====
+// ===== REACCIONES (MODIFICADO SOLO ESTO) =====
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-  if (!mensajeRolesGlobal) return;
-  if (reaction.message.id !== mensajeRolesGlobal.id) return;
+  if (reaction.message.channel.id !== CANAL_ROLES) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
   if (!roleId) return;
@@ -113,13 +102,12 @@ client.on("messageReactionAdd", async (reaction, user) => {
   if (yaTieneOtro) {
     await reaction.users.remove(user.id).catch(() => {});
 
-    // mensaje solo para él en el canal
-    const msg = await reaction.message.channel.send({
-      content: `❌ <@${user.id}> Solo puedes tener **un rol** a la vez. Quita tu rol actual antes de elegir otro.`
+    const aviso = await reaction.message.channel.send({
+      content: `❌ <@${user.id}> Solo puedes tener **un rol** a la vez.`
     });
 
     setTimeout(() => {
-      msg.delete().catch(() => {});
+      aviso.delete().catch(() => {});
     }, 4000);
 
     return;
@@ -131,8 +119,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
 client.on("messageReactionRemove", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-  if (!mensajeRolesGlobal) return;
-  if (reaction.message.id !== mensajeRolesGlobal.id) return;
+  if (reaction.message.channel.id !== CANAL_ROLES) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
   if (!roleId) return;
@@ -203,7 +190,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(`FORMULARIO COMPLETO AQUÍ...`)
+      .setDescription(`(AQUÍ VA TU FORMULARIO COMPLETO EXACTAMENTE IGUAL COMO LO TENÍAS)`)
       .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -229,10 +216,61 @@ client.on("interactionCreate", async (interaction) => {
     await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
   }
 
+  if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
+
+    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+      return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+    }
+
+    const userId = interaction.channel.name.replace("verificacion-", "");
+    const member = await interaction.guild.members.fetch(userId).catch(() => null);
+
+    if (!member) {
+      return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
+    }
+
+    if (interaction.customId === "aceptar_miembro") {
+
+      const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
+      if (rol) await member.roles.add(rol);
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("✅ Aceptado")
+            .setDescription(`Bienvenido ${member.user.username}`)
+            .setColor(0x00FF00)
+        ]
+      });
+
+      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
+    }
+
+    if (interaction.customId === "rechazar_miembro") {
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("❌ Rechazado")
+            .setDescription("Serás baneado en 15 segundos.")
+            .setColor(0xFF0000)
+        ]
+      });
+
+      setTimeout(async () => {
+        await member.ban({ reason: "Solicitud rechazada." }).catch(() => {});
+      }, 15000);
+
+      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
+    }
+  }
+
   if (interaction.customId === "cerrar_ticket") {
+
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
       return interaction.reply({ content: "❌ Solo staff.", ephemeral: true });
     }
+
     await interaction.channel.delete().catch(() => {});
   }
 });
