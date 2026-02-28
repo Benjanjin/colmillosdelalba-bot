@@ -47,7 +47,6 @@ client.once("ready", async () => {
   });
 });
 
-
 // =====================================================
 // 🔔 SISTEMA DE AVISOS + RESPUESTA DM
 // =====================================================
@@ -56,9 +55,6 @@ client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
 
-  // =========================
-  // 💬 RESPUESTA EN PRIVADO
-  // =========================
   if (!message.guild) {
 
     const embedDM = new EmbedBuilder()
@@ -71,9 +67,6 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
-  // =========================
-  // 🔔 CANAL DE AVISOS
-  // =========================
   if (message.channel.id === CANAL_AVISOS) {
 
     const contenido = message.content;
@@ -93,7 +86,6 @@ client.on("messageCreate", async (message) => {
     });
   }
 });
-
 
 // ============================
 // INTERACCIONES (TICKETS)
@@ -134,25 +126,7 @@ client.on("interactionCreate", async (interaction) => {
 Buscamos disciplina, constancia y mentalidad de equipo.
 Las solicitudes incompletas serán rechazadas.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👤 Nick:
-🎂 Edad:
-🚻 Sexo:
-🌎 Región / País:
-🎮 Especialidad principal:
-(Constructor, Redstone, PvP, Estratega, Técnico, Explorador, etc.)
-⚔ Nivel aproximado en PvP:
-(Bajo / Medio / Alto / Competitivo)
-🏰 Experiencia en clanes anteriores:
-(Especificar nombre y rol desempeñado)
-⏳ Años de experiencia en Minecraft:
-⏰ Disponibilidad semanal:
-(Horarios y días activos)
-🎤 ¿Dispones de micrófono y actividad en Discord?
-(Sí / No – Especificar)
-
-⚠ El ingreso no está garantizado.
-Se evaluará actitud, nivel y compromiso.`)
+⚠ El ingreso no está garantizado.`)
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -197,22 +171,24 @@ Se evaluará actitud, nivel y compromiso.`)
       });
     }
 
+    const channelName = interaction.channel.name;
+    const username = channelName.replace("verificacion-", "");
+    const members = await interaction.guild.members.fetch();
+    const member = members.find(
+      m => m.user.username === username || m.displayName === username
+    );
+
+    if (!member) {
+      return interaction.reply({
+        content: "❌ No se pudo encontrar al usuario.",
+        ephemeral: true
+      });
+    }
+
+    // =========================
+    // ✅ ACEPTAR
+    // =========================
     if (interaction.customId === "aceptar_miembro") {
-
-      const channelName = interaction.channel.name;
-      const username = channelName.replace("verificacion-", "");
-
-      const members = await interaction.guild.members.fetch();
-      const member = members.find(
-        m => m.user.username === username || m.displayName === username
-      );
-
-      if (!member) {
-        return interaction.reply({
-          content: "❌ No se pudo encontrar al usuario.",
-          ephemeral: true
-        });
-      }
 
       const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
       if (rol) {
@@ -229,15 +205,21 @@ Se evaluará actitud, nivel y compromiso.`)
       await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
     }
 
+    // =========================
+    // ❌ RECHAZAR + BAN 15s
+    // =========================
     if (interaction.customId === "rechazar_miembro") {
 
       const embedRechazado = new EmbedBuilder()
         .setTitle("❌ Solicitud Rechazada")
-        .setDescription(`No fuiste aceptado por la administración del servidor.
-Puedes volver a intentarlo más adelante.`)
+        .setDescription(`Has sido rechazado.\nSerás expulsado del servidor en 15 segundos.`)
         .setColor(0xFF0000);
 
       await interaction.reply({ embeds: [embedRechazado] });
+
+      setTimeout(async () => {
+        await member.ban({ reason: "Solicitud rechazada por el staff." }).catch(() => {});
+      }, 15000);
 
       await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
     }
