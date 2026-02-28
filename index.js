@@ -175,20 +175,48 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
+      .setDescription(`╔══════════════════════════════════╗
+            ⚔  COLMILLOS DEL ALBA  ⚔
+╚══════════════════════════════════╝
 
-👤 Nick:
-🎂 Edad:
-🚻 Sexo:
-🌎 Región / País:
-🎮 Especialidad:
-⚔ Nivel PvP:
-🏰 Experiencia:
-⏳ Años jugando:
-⏰ Disponibilidad:
-🎤 Micrófono:
+        ━━━  PROCESO DE RECLUTAMIENTO OFICIAL  ━━━
 
-⚠ Se evaluará actitud y compromiso.`)
+Colmillos del Alba es un clan competitivo y estructurado.
+Buscamos miembros con disciplina, constancia y mentalidad de equipo.
+Las solicitudes incompletas o poco serias serán rechazadas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤  Nick en Minecraft:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎂  Edad:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚻  Sexo:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌎  Región / País:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎮  Especialidad Principal:
+(Constructor • Redstone • PvP • Estratega • Técnico • Explorador • Otro)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚔  Nivel aproximado en PvP:
+(Bajo • Medio • Alto • Competitivo)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳  Años de experiencia en Minecraft:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰  Disponibilidad semanal:
+(Días activos y horarios aproximados)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎤  ¿Dispones de micrófono y actividad en Discord?
+(Sí / No — Especificar)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠  IMPORTANTE
+El ingreso no está garantizado.
+Se evaluará actitud, nivel, compromiso y comportamiento.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        ⚔  FORJAMOS LEALTAD Y PODER  ⚔
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
 
