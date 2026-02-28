@@ -16,9 +16,9 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions // 🔥 agregado
+    GatewayIntentBits.GuildMessageReactions
   ],
-  partials: [Partials.Channel, Partials.Message, Partials.Reaction] // 🔥 agregado
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction]
 });
 
 // ===== CONFIG =====
@@ -28,12 +28,10 @@ const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
 const CANAL_AVISOS = "1462533102130958437";
-const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
-
-// 🔥 NUEVO CANAL ROLES
 const CANAL_ROLES = "1464335122005491745";
 
-// 🔥 MAPA ROLES
+const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
+
 const ROLES_REACCIONES = {
   "⚔️": "1464335696390263069",
   "⚒️": "1464335639561506878",
@@ -65,20 +63,24 @@ client.once("ready", async () => {
     });
   }
 
-  // ===== 🔥 SISTEMA DE ROLES POR REACCIÓN =====
+  // ===== EMBED ROLES =====
   const canalRoles = await client.channels.fetch(CANAL_ROLES);
   const mensajesRoles = await canalRoles.messages.fetch({ limit: 10 });
 
   let mensajeRoles = mensajesRoles.find(m => m.author.id === client.user.id);
 
-  const contenidoRoles = `╔══ ≪ ° Roles ° ≫ ══╗
-『⚔️』<@&1464335696390263069>
+  if (!mensajeRoles) {
+
+    const embedRoles = new EmbedBuilder()
+      .setTitle("╔══ ≪ ° Roles ° ≫ ══╗")
+      .setDescription(`『⚔️』<@&1464335696390263069>
 『⚒️』<@&1464335639561506878>
 『⚙️』<@&1464335746944209161>
-『🏛️』<@&1464335746856128737>`;
+『🏛️』<@&1464335746856128737>`)
+      .setColor(0x8B0000) // rojo oscuro elegante
+      .setImage(IMAGEN_FORMULARIO);
 
-  if (!mensajeRoles) {
-    mensajeRoles = await canalRoles.send(contenidoRoles);
+    mensajeRoles = await canalRoles.send({ embeds: [embedRoles] });
 
     for (const emoji of Object.keys(ROLES_REACCIONES)) {
       await mensajeRoles.react(emoji);
@@ -90,7 +92,6 @@ client.once("ready", async () => {
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-
   if (reaction.message.channel.id !== CANAL_ROLES) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
@@ -103,7 +104,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
 client.on("messageReactionRemove", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-
   if (reaction.message.channel.id !== CANAL_ROLES) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
@@ -189,7 +189,7 @@ client.on("interactionCreate", async (interaction) => {
 🎤 Micrófono:
 
 ⚠ Se evaluará actitud y compromiso.`)
-      .setColor(0xFF0000)
+      .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
 
     const aceptar = new ButtonBuilder()
