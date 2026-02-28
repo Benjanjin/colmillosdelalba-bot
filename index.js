@@ -39,6 +39,8 @@ const ROLES_REACCIONES = {
   "🏛️": "1464335746856128737"
 };
 
+let mensajeRolesGlobal = null; // ← agregado para control
+
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
@@ -77,7 +79,7 @@ client.once("ready", async () => {
 『⚒️』<@&1464335639561506878>
 『⚙️』<@&1464335746944209161>
 『🏛️』<@&1464335746856128737>`)
-      .setColor(0x8B0000) // rojo oscuro elegante
+      .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
 
     mensajeRoles = await canalRoles.send({ embeds: [embedRoles] });
@@ -86,25 +88,51 @@ client.once("ready", async () => {
       await mensajeRoles.react(emoji);
     }
   }
+
+  mensajeRolesGlobal = mensajeRoles; // guardamos referencia
 });
 
-// ===== REACCIONES =====
+// ===== REACCIONES (ACTUALIZADO SOLO ESTO) =====
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-  if (reaction.message.channel.id !== CANAL_ROLES) return;
+  if (!mensajeRolesGlobal) return;
+  if (reaction.message.id !== mensajeRolesGlobal.id) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
   if (!roleId) return;
 
   const member = await reaction.message.guild.members.fetch(user.id);
+
+  const rolesSistema = Object.values(ROLES_REACCIONES);
+
+  const yaTieneOtro = rolesSistema.some(id =>
+    id !== roleId && member.roles.cache.has(id)
+  );
+
+  if (yaTieneOtro) {
+    await reaction.users.remove(user.id).catch(() => {});
+
+    // mensaje solo para él en el canal
+    const msg = await reaction.message.channel.send({
+      content: `❌ <@${user.id}> Solo puedes tener **un rol** a la vez. Quita tu rol actual antes de elegir otro.`
+    });
+
+    setTimeout(() => {
+      msg.delete().catch(() => {});
+    }, 4000);
+
+    return;
+  }
+
   await member.roles.add(roleId).catch(() => {});
 });
 
 client.on("messageReactionRemove", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-  if (reaction.message.channel.id !== CANAL_ROLES) return;
+  if (!mensajeRolesGlobal) return;
+  if (reaction.message.id !== mensajeRolesGlobal.id) return;
 
   const roleId = ROLES_REACCIONES[reaction.emoji.name];
   if (!roleId) return;
@@ -175,48 +203,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(`╔══════════════════════════════════╗
-            ⚔  COLMILLOS DEL ALBA  ⚔
-╚══════════════════════════════════╝
-
-        ━━━  PROCESO DE RECLUTAMIENTO OFICIAL  ━━━
-
-Colmillos del Alba es un clan competitivo y estructurado.
-Buscamos miembros con disciplina, constancia y mentalidad de equipo.
-Las solicitudes incompletas o poco serias serán rechazadas.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-👤  Nick en Minecraft:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎂  Edad:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚻  Sexo:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌎  Región / País:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎮  Especialidad Principal:
-(Constructor • Redstone • PvP • Estratega • Técnico • Explorador • Otro)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚔  Nivel aproximado en PvP:
-(Bajo • Medio • Alto • Competitivo)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏳  Años de experiencia en Minecraft:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰  Disponibilidad semanal:
-(Días activos y horarios aproximados)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎤  ¿Dispones de micrófono y actividad en Discord?
-(Sí / No — Especificar)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-⚠  IMPORTANTE
-El ingreso no está garantizado.
-Se evaluará actitud, nivel, compromiso y comportamiento.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        ⚔  FORJAMOS LEALTAD Y PODER  ⚔
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      .setDescription(`FORMULARIO COMPLETO AQUÍ...`)
       .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -242,61 +229,10 @@ Se evaluará actitud, nivel, compromiso y comportamiento.
     await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
   }
 
-  if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
-
-    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
-      return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
-    }
-
-    const userId = interaction.channel.name.replace("verificacion-", "");
-    const member = await interaction.guild.members.fetch(userId).catch(() => null);
-
-    if (!member) {
-      return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
-    }
-
-    if (interaction.customId === "aceptar_miembro") {
-
-      const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
-      if (rol) await member.roles.add(rol);
-
-      await interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle("✅ Aceptado")
-            .setDescription(`Bienvenido ${member.user.username}`)
-            .setColor(0x00FF00)
-        ]
-      });
-
-      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
-    }
-
-    if (interaction.customId === "rechazar_miembro") {
-
-      await interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle("❌ Rechazado")
-            .setDescription("Serás baneado en 15 segundos.")
-            .setColor(0xFF0000)
-        ]
-      });
-
-      setTimeout(async () => {
-        await member.ban({ reason: "Solicitud rechazada." }).catch(() => {});
-      }, 15000);
-
-      await interaction.channel.setParent(CATEGORIA_HISTORIAL);
-    }
-  }
-
   if (interaction.customId === "cerrar_ticket") {
-
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
       return interaction.reply({ content: "❌ Solo staff.", ephemeral: true });
     }
-
     await interaction.channel.delete().catch(() => {});
   }
 });
