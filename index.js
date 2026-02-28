@@ -39,7 +39,7 @@ client.once("ready", async () => {
 
   const fila = new ActionRowBuilder().addComponents(boton);
 
-  canal.send({
+  await canal.send({
     content: "Haz clic aquí para solicitar acceso al clan:",
     components: [fila]
   });
@@ -48,6 +48,9 @@ client.once("ready", async () => {
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
+  // ============================
+  // CREAR TICKET
+  // ============================
   if (interaction.customId === "crear_ticket") {
 
     const existingChannel = interaction.guild.channels.cache.find(
@@ -75,7 +78,32 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription("Completa el formulario para solicitar ingreso al clan.")
+      .setDescription(
+`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
+
+Buscamos disciplina, constancia y mentalidad de equipo.
+Las solicitudes incompletas serán rechazadas.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Nick:
+🎂 Edad:
+🚻 Sexo:
+🌎 Región / País:
+🎮 Especialidad principal:
+(Constructor, Redstone, PvP, Estratega, Técnico, Explorador, etc.)
+⚔ Nivel aproximado en PvP:
+(Bajo / Medio / Alto / Competitivo)
+🏰 Experiencia en clanes anteriores:
+(Especificar nombre y rol desempeñado)
+⏳ Años de experiencia en Minecraft:
+⏰ Disponibilidad semanal:
+(Horarios y días activos)
+🎤 ¿Dispones de micrófono y actividad en Discord?
+(Sí / No – Especificar)
+
+⚠ El ingreso no está garantizado.
+Se evaluará actitud, nivel y compromiso.`
+      )
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -94,9 +122,16 @@ client.on("interactionCreate", async (interaction) => {
       .setLabel("Cerrar Ticket")
       .setStyle(ButtonStyle.Secondary);
 
-    const filaBotones = new ActionRowBuilder().addComponents(aceptar, rechazar, cerrarTicket);
+    const filaBotones = new ActionRowBuilder().addComponents(
+      aceptar,
+      rechazar,
+      cerrarTicket
+    );
 
-    await canal.send({ embeds: [embedFormulario], components: [filaBotones] });
+    await canal.send({
+      embeds: [embedFormulario],
+      components: [filaBotones]
+    });
 
     await interaction.reply({
       content: "✅ Tu ticket fue creado correctamente.",
@@ -104,11 +139,14 @@ client.on("interactionCreate", async (interaction) => {
     });
   }
 
+  // ============================
+  // ACEPTAR / RECHAZAR
+  // ============================
   if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
       return interaction.reply({
-        content: "❌ No tienes permisos.",
+        content: "❌ No tienes permisos para usar este botón.",
         ephemeral: true
       });
     }
@@ -135,27 +173,38 @@ client.on("interactionCreate", async (interaction) => {
         await member.roles.add(rol);
       }
 
-      await interaction.reply({
-        content: `✅ ${member.user.username} fue aceptado en el clan.`
-      });
+      const embedAceptado = new EmbedBuilder()
+        .setTitle("✅ Solicitud Aceptada")
+        .setDescription(`¡Felicidades ${member.user.username}! Has sido aceptado en el clan. 🎉`)
+        .setColor(0x00FF00);
+
+      await interaction.reply({ embeds: [embedAceptado] });
 
       await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
     }
 
     if (interaction.customId === "rechazar_miembro") {
-      await interaction.reply({
-        content: "❌ Solicitud rechazada."
-      });
+
+      const embedRechazado = new EmbedBuilder()
+        .setTitle("❌ Solicitud Rechazada")
+        .setDescription(`No fuiste aceptado por la administración del servidor.
+Puedes volver a intentarlo más adelante.`)
+        .setColor(0xFF0000);
+
+      await interaction.reply({ embeds: [embedRechazado] });
 
       await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
     }
   }
 
+  // ============================
+  // CERRAR TICKET
+  // ============================
   if (interaction.customId === "cerrar_ticket") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
       return interaction.reply({
-        content: "❌ Solo Staff puede cerrar.",
+        content: "❌ Este botón es solo para Staff.",
         ephemeral: true
       });
     }
@@ -164,5 +213,5 @@ client.on("interactionCreate", async (interaction) => {
   }
 });
 
-// 🔥 USAR VARIABLE DE ENTORNO
+// 🔥 LOGIN CON VARIABLE DE ENTORNO
 client.login(process.env.TOKEN);
