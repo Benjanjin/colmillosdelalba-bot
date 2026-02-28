@@ -55,6 +55,7 @@ client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
 
+  // 💬 RESPUESTA EN PRIVADO
   if (!message.guild) {
 
     const embedDM = new EmbedBuilder()
@@ -67,6 +68,7 @@ client.on("messageCreate", async (message) => {
     return;
   }
 
+  // 🔔 CANAL DE AVISOS
   if (message.channel.id === CANAL_AVISOS) {
 
     const contenido = message.content;
@@ -121,12 +123,30 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
+      .setDescription(
+`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
 
 Buscamos disciplina, constancia y mentalidad de equipo.
 Las solicitudes incompletas serán rechazadas.
 
-⚠ El ingreso no está garantizado.`)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👤 Nick:
+🎂 Edad:
+🚻 Sexo:
+🌎 Región / País:
+🎮 Especialidad principal:
+(Constructor, Redstone, PvP, Estratega, Técnico, Explorador, etc.)
+⚔ Nivel aproximado en PvP:
+(Bajo / Medio / Alto / Competitivo)
+(Especificar nombre y rol desempeñado)
+⏳ Años de experiencia en Minecraft:
+⏰ Disponibilidad semanal:
+(Horarios y días activos)
+🎤 ¿Dispones de micrófono y actividad en Discord?
+(Sí / No – Especificar)
+
+⚠ El ingreso no está garantizado.
+Se evaluará actitud, nivel y compromiso.`)
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -173,6 +193,7 @@ Las solicitudes incompletas serán rechazadas.
 
     const channelName = interaction.channel.name;
     const username = channelName.replace("verificacion-", "");
+
     const members = await interaction.guild.members.fetch();
     const member = members.find(
       m => m.user.username === username || m.displayName === username
@@ -185,9 +206,7 @@ Las solicitudes incompletas serán rechazadas.
       });
     }
 
-    // =========================
     // ✅ ACEPTAR
-    // =========================
     if (interaction.customId === "aceptar_miembro") {
 
       const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
@@ -205,14 +224,13 @@ Las solicitudes incompletas serán rechazadas.
       await interaction.channel.setParent(CATEGORIA_HISTORIAL, { lockPermissions: true });
     }
 
-    // =========================
     // ❌ RECHAZAR + BAN 15s
-    // =========================
     if (interaction.customId === "rechazar_miembro") {
 
       const embedRechazado = new EmbedBuilder()
         .setTitle("❌ Solicitud Rechazada")
-        .setDescription(`Has sido rechazado.\nSerás expulsado del servidor en 15 segundos.`)
+        .setDescription(`No fuiste aceptado por la administración del servidor.
+Serás expulsado del servidor en 15 segundos.`)
         .setColor(0xFF0000);
 
       await interaction.reply({ embeds: [embedRechazado] });
