@@ -14,7 +14,8 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent // 👈 NECESARIO PARA LEER MENSAJES
   ],
   partials: [Partials.Channel]
 });
@@ -25,6 +26,7 @@ const CLAN_ROLE_ID = "1459687732417921227";
 const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
+const CANAL_AVISOS = "1462533102130958437"; // 👈 NUEVO
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
 client.once("ready", async () => {
@@ -45,12 +47,43 @@ client.once("ready", async () => {
   });
 });
 
+
+// =====================================================
+// 🔔 SISTEMA DE AVISOS AUTOMÁTICO CON EMBED
+// =====================================================
+
+client.on("messageCreate", async (message) => {
+
+  if (message.author.bot) return;
+
+  if (message.channel.id === CANAL_AVISOS) {
+
+    const contenido = message.content;
+
+    await message.delete().catch(() => {});
+
+    const embedAviso = new EmbedBuilder()
+      .setTitle("🚨 AVISO IMPORTANTE 🚨")
+      .setDescription(contenido)
+      .setColor(0xFF0000)
+      .setImage(IMAGEN_FORMULARIO)
+      .setFooter({ text: `Publicado por ${message.author.tag}` })
+      .setTimestamp();
+
+    await message.channel.send({
+      embeds: [embedAviso]
+    });
+  }
+});
+
+
+// ============================
+// INTERACCIONES (TICKETS)
+// ============================
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
-  // ============================
-  // CREAR TICKET
-  // ============================
   if (interaction.customId === "crear_ticket") {
 
     const existingChannel = interaction.guild.channels.cache.find(
@@ -78,8 +111,7 @@ client.on("interactionCreate", async (interaction) => {
 
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription(
-`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
+      .setDescription(`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
 
 Buscamos disciplina, constancia y mentalidad de equipo.
 Las solicitudes incompletas serán rechazadas.
@@ -102,8 +134,7 @@ Las solicitudes incompletas serán rechazadas.
 (Sí / No – Especificar)
 
 ⚠ El ingreso no está garantizado.
-Se evaluará actitud, nivel y compromiso.`
-      )
+Se evaluará actitud, nivel y compromiso.`)
       .setColor(0xFF0000)
       .setImage(IMAGEN_FORMULARIO);
 
@@ -139,9 +170,6 @@ Se evaluará actitud, nivel y compromiso.`
     });
   }
 
-  // ============================
-  // ACEPTAR / RECHAZAR
-  // ============================
   if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
@@ -197,9 +225,6 @@ Puedes volver a intentarlo más adelante.`)
     }
   }
 
-  // ============================
-  // CERRAR TICKET
-  // ============================
   if (interaction.customId === "cerrar_ticket") {
 
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
@@ -213,5 +238,4 @@ Puedes volver a intentarlo más adelante.`)
   }
 });
 
-// 🔥 LOGIN CON VARIABLE DE ENTORNO
 client.login(process.env.TOKEN);
