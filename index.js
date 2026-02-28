@@ -16,9 +16,9 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions
+    GatewayIntentBits.GuildMessageReactions // 🔥 agregado
   ],
-  partials: [Partials.Channel, Partials.Message, Partials.Reaction]
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction] // 🔥 agregado
 });
 
 // ===== CONFIG =====
@@ -27,11 +27,13 @@ const CLAN_ROLE_ID = "1459687732417921227";
 const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
+const CANAL_AVISOS = "1462533102130958437";
+const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
+
+// 🔥 NUEVO CANAL ROLES
 const CANAL_ROLES = "1464335122005491745";
 
-const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e8885.png";
-
-// ROLES REACCIONES
+// 🔥 MAPA ROLES
 const ROLES_REACCIONES = {
   "⚔️": "1464335696390263069",
   "⚒️": "1464335639561506878",
@@ -42,9 +44,8 @@ const ROLES_REACCIONES = {
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
-  // ===== BOTÓN TICKET =====
-  const canalInicial = await client.channels.fetch(CANAL_INICIAL);
-  const mensajes = await canalInicial.messages.fetch({ limit: 10 });
+  const canal = await client.channels.fetch(CANAL_INICIAL);
+  const mensajes = await canal.messages.fetch({ limit: 20 });
 
   const yaExiste = mensajes.find(
     m => m.author.id === client.user.id && m.components.length > 0
@@ -58,13 +59,13 @@ client.once("ready", async () => {
 
     const fila = new ActionRowBuilder().addComponents(boton);
 
-    await canalInicial.send({
+    await canal.send({
       content: "Haz clic aquí para solicitar acceso al clan:",
       components: [fila]
     });
   }
 
-  // ===== MENSAJE ROLES =====
+  // ===== 🔥 SISTEMA DE ROLES POR REACCIÓN =====
   const canalRoles = await client.channels.fetch(CANAL_ROLES);
   const mensajesRoles = await canalRoles.messages.fetch({ limit: 10 });
 
@@ -85,10 +86,9 @@ client.once("ready", async () => {
   }
 });
 
-// ===== SISTEMA REACCIONES =====
+// ===== REACCIONES =====
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
-
   if (reaction.partial) await reaction.fetch();
 
   if (reaction.message.channel.id !== CANAL_ROLES) return;
@@ -102,7 +102,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
 client.on("messageReactionRemove", async (reaction, user) => {
   if (user.bot) return;
-
   if (reaction.partial) await reaction.fetch();
 
   if (reaction.message.channel.id !== CANAL_ROLES) return;
@@ -114,7 +113,36 @@ client.on("messageReactionRemove", async (reaction, user) => {
   await member.roles.remove(roleId).catch(() => {});
 });
 
-// ===== TICKETS =====
+client.on("messageCreate", async (message) => {
+
+  if (message.author.bot) return;
+
+  if (!message.guild) {
+    const embedDM = new EmbedBuilder()
+      .setTitle("🤖 Información del Bot")
+      .setDescription("**Creado por 1fsi**\n\nVenta de bots personalizados.\nDiscord: **1fsi**")
+      .setColor(0x00AEFF);
+
+    await message.reply({ embeds: [embedDM] });
+    return;
+  }
+
+  if (message.channel.id === CANAL_AVISOS) {
+
+    await message.delete().catch(() => {});
+
+    const embedAviso = new EmbedBuilder()
+      .setTitle("🚨 AVISO IMPORTANTE 🚨")
+      .setDescription(message.content)
+      .setColor(0xFF0000)
+      .setImage(IMAGEN_FORMULARIO)
+      .setFooter({ text: `Publicado por ${message.author.tag}` })
+      .setTimestamp();
+
+    await message.channel.send({ embeds: [embedAviso] });
+  }
+});
+
 client.on("interactionCreate", async (interaction) => {
   if (!interaction.isButton()) return;
 
@@ -122,11 +150,11 @@ client.on("interactionCreate", async (interaction) => {
 
     const nombreCanal = `verificacion-${interaction.user.id}`;
 
-    const existing = interaction.guild.channels.cache.find(
+    const existingChannel = interaction.guild.channels.cache.find(
       c => c.name === nombreCanal
     );
 
-    if (existing) {
+    if (existingChannel) {
       return interaction.reply({
         content: "❌ Ya tienes un ticket abierto.",
         ephemeral: true
@@ -140,72 +168,50 @@ client.on("interactionCreate", async (interaction) => {
       permissionOverwrites: [
         { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
         { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
-        { id: STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
+        { id: STAFF_ROLE_ID, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
+        { id: client.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] }
       ]
     });
 
-    await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
-
-    const preguntas = [
-      "👤 Nick:",
-      "🎂 Edad:",
-      "🚻 Sexo:",
-      "🌎 Región / País:",
-      "🎮 Especialidad:",
-      "⚔ Nivel PvP:",
-      "🏰 Experiencia:",
-      "⏳ Años jugando:",
-      "⏰ Disponibilidad:",
-      "🎤 Micrófono:"
-    ];
-
-    const respuestas = [];
-
-    const embedInicio = new EmbedBuilder()
+    const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
-      .setDescription("Responde las siguientes preguntas:")
-      .setImage(IMAGEN_FORMULARIO)
-      .setColor(0xFF0000);
+      .setDescription(`📜 **PROCESO DE RECLUTAMIENTO OFICIAL**
 
-    await canal.send({ embeds: [embedInicio] });
+👤 Nick:
+🎂 Edad:
+🚻 Sexo:
+🌎 Región / País:
+🎮 Especialidad:
+⚔ Nivel PvP:
+🏰 Experiencia:
+⏳ Años jugando:
+⏰ Disponibilidad:
+🎤 Micrófono:
 
-    for (const pregunta of preguntas) {
-      await canal.send(pregunta);
-
-      const collected = await canal.awaitMessages({
-        filter: m => m.author.id === interaction.user.id,
-        max: 1,
-        time: 300000
-      }).catch(() => null);
-
-      if (!collected || !collected.first()) {
-        await canal.send("⏰ Tiempo agotado. Ticket cerrado.");
-        return canal.delete().catch(() => {});
-      }
-
-      respuestas.push(collected.first().content);
-    }
-
-    const resumen = preguntas.map((p, i) => `${p} ${respuestas[i]}`).join("\n");
-
-    const embedFinal = new EmbedBuilder()
-      .setTitle("📋 Solicitud completada")
-      .setDescription(resumen)
-      .setColor(0x00AEFF);
+⚠ Se evaluará actitud y compromiso.`)
+      .setColor(0xFF0000)
+      .setImage(IMAGEN_FORMULARIO);
 
     const aceptar = new ButtonBuilder()
       .setCustomId("aceptar_miembro")
-      .setLabel("Aceptar")
+      .setLabel("Aceptar Miembro")
       .setStyle(ButtonStyle.Success);
 
     const rechazar = new ButtonBuilder()
       .setCustomId("rechazar_miembro")
-      .setLabel("Rechazar")
+      .setLabel("Rechazar Miembro")
       .setStyle(ButtonStyle.Danger);
 
-    const fila = new ActionRowBuilder().addComponents(aceptar, rechazar);
+    const cerrar = new ButtonBuilder()
+      .setCustomId("cerrar_ticket")
+      .setLabel("Cerrar Ticket")
+      .setStyle(ButtonStyle.Secondary);
 
-    await canal.send({ embeds: [embedFinal], components: [fila] });
+    const fila = new ActionRowBuilder().addComponents(aceptar, rechazar, cerrar);
+
+    await canal.send({ embeds: [embedFormulario], components: [fila] });
+
+    await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
   }
 
   if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
@@ -216,16 +222,38 @@ client.on("interactionCreate", async (interaction) => {
 
     const userId = interaction.channel.name.replace("verificacion-", "");
     const member = await interaction.guild.members.fetch(userId).catch(() => null);
-    if (!member) return;
+
+    if (!member) {
+      return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
+    }
 
     if (interaction.customId === "aceptar_miembro") {
-      await member.roles.add(CLAN_ROLE_ID).catch(() => {});
-      await interaction.reply("✅ Usuario aceptado.");
+
+      const rol = interaction.guild.roles.cache.get(CLAN_ROLE_ID);
+      if (rol) await member.roles.add(rol);
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("✅ Aceptado")
+            .setDescription(`Bienvenido ${member.user.username}`)
+            .setColor(0x00FF00)
+        ]
+      });
+
       await interaction.channel.setParent(CATEGORIA_HISTORIAL);
     }
 
     if (interaction.customId === "rechazar_miembro") {
-      await interaction.reply("❌ Usuario rechazado. Será baneado en 15 segundos.");
+
+      await interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("❌ Rechazado")
+            .setDescription("Serás baneado en 15 segundos.")
+            .setColor(0xFF0000)
+        ]
+      });
 
       setTimeout(async () => {
         await member.ban({ reason: "Solicitud rechazada." }).catch(() => {});
@@ -233,6 +261,15 @@ client.on("interactionCreate", async (interaction) => {
 
       await interaction.channel.setParent(CATEGORIA_HISTORIAL);
     }
+  }
+
+  if (interaction.customId === "cerrar_ticket") {
+
+    if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) {
+      return interaction.reply({ content: "❌ Solo staff.", ephemeral: true });
+    }
+
+    await interaction.channel.delete().catch(() => {});
   }
 });
 
