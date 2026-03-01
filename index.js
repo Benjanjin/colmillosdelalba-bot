@@ -76,7 +76,8 @@ client.once("ready", async () => {
     { name: 'kick', description: 'Expulsar usuario', options: [{ name: 'usuario', description: 'Usuario a expulsar', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
     { name: 'ban', description: 'Banear usuario', options: [{ name: 'usuario', description: 'Usuario a banear', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
     { name: 'warn', description: 'Advertir usuario', options: [{ name: 'usuario', description: 'Usuario a advertir', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
-    // COMANDO SORTEO
+    
+    // COMANDO SORTEO AÑADIDO
     { name: 'sorteo', description: 'Iniciar un sorteo', options: [
         { name: 'premio', description: '¿Qué se sortea?', type: 3, required: true },
         { name: 'duracion', description: 'Duración en minutos', type: 4, required: true }
@@ -350,7 +351,7 @@ client.on("interactionCreate", async (interaction) => {
 • \`/kick\`: Expulsar usuario.
 • \`/ban\`: Banear usuario.
 • \`/warn\`: Advertir usuario.
-• \`/sorteo [premio] [duracion]\`: Iniciar sorteo.`)
+• \`/sorteo [premio] [duracion]\`: Iniciar sorteo (Staff).`)
         .setColor(0x8B0000);
       return interaction.reply({ embeds: [embedComandos] });
     }
@@ -584,7 +585,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       return interaction.reply({ content: "📊 Comando en desarrollo.", ephemeral: true });
     }
 
-    // ===== LÓGICA SORTEO =====
+    // ===== LÓGICA COMANDO /SORTEO (MEJORADA) =====
     if (commandName === "sorteo") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const premio = options.getString("premio");
@@ -592,52 +593,61 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
 
         const embedSorteo = new EmbedBuilder()
             .setTitle("🎉 ¡NUEVO SORTEO! 🎉")
-            .setDescription(`Premio: **${premio}**\n\nPresiona el botón para participar.\nDuración: ${duracion} minutos.`)
+            .setDescription(`Premio: **${premio}**\n\nReacciona con 🎟️ para participar.\nDuración: ${duracion} minutos.`)
             .setColor(0x00FF00)
             .setFooter({ text: `Sorteo iniciado por ${interaction.user.username}` })
             .setTimestamp(Date.now() + duracion * 60000);
 
-        const botonParticipar = new ButtonBuilder()
-            .setCustomId("participar_sorteo")
-            .setLabel("Participar")
-            .setStyle(ButtonStyle.Success)
-            .setEmoji("🎟️");
-
-        const fila = new ActionRowBuilder().addComponents(botonParticipar);
-        
         await interaction.reply({ content: "✅ Sorteo creado.", ephemeral: true });
-        const mensajeSorteo = await interaction.channel.send({ embeds: [embedSorteo], components: [fila] });
+        const mensajeSorteo = await interaction.channel.send({ content: "@everyone", embeds: [embedSorteo] });
+        await mensajeSorteo.react("🎟️");
 
+        // Temporizador para finalizar
         setTimeout(async () => {
-            await mensajeSorteo.fetch();
-            const reacciones = mensajeSorteo.reactions.cache.get("🎟️"); // Si usas reacciones en vez de botones
-            // Como usamos botones, necesitamos una lógica diferente para capturar participantes
-            // Por simplicidad, este ejemplo básico requiere una lógica de base de datos o Map
-            // Usaremos un Map local para este ejemplo:
-            const participantes = []; // Aquí deberías guardar IDs si usas botones de esta forma
-            // ... lógica compleja de botones ...
+            // Actualizar mensaje para obtener reacciones frescas
+            const fetchedMessage = await mensajeSorteo.fetch();
+            const reactions = fetchedMessage.reactions.cache.get("🎟️");
             
-            // --- LÓGICA DE BOTONES SIMPLIFICADA PARA EL SORTEO ---
-            // Para que este código funcione sin base de datos, usaremos una lógica de recolección de reacciones 
-            // en el botón que no es nativa.
-            // RECOMENDACIÓN: Usar reacciones en lugar de botones para sorteos simples.
+            if (!reactions || reactions.count <= 1) {
+                return interaction.channel.send("😞 No hubo suficientes participantes para el sorteo.");
+            }
+
+            // Obtener usuarios participantes (excluyendo al bot)
+            const users = await reactions.users.fetch();
+            const participants = users.filter(u => !u.bot);
+
+            if (participants.size === 0) {
+                return interaction.channel.send("😞 No hubo participantes para el sorteo.");
+            }
+
+            // Seleccionar ganador al azar
+            const winner = participants.random();
+
+            // Embed de Ganador
+            const embedGanador = new EmbedBuilder()
+                .setTitle("🏆 ¡Tenemos un Ganador! 🏆")
+                .setDescription(`Premio: **${premio}**\n\nFelicidades <@${winner.id}> por ganar el sorteo.\nGracias a todos por participar.`)
+                .setColor(0xFFD700)
+                .setThumbnail(winner.displayAvatarURL({ dynamic: true }))
+                .setFooter({ text: "Sorteo finalizado" })
+                .setTimestamp();
+
+            await interaction.channel.send({ content: `🎉 ¡El sorteo ha terminado!`, embeds: [embedGanador] });
             
-            await interaction.channel.send(`🎉 ¡El sorteo de **${premio}** ha terminado!`);
+            // Opcional: Registrar ganadores en el canal de logs si existe
+            const logChannel = guild.channels.cache.get(CANAL_LOGS);
+            if(logChannel) {
+                logChannel.send(`🏆 **${premio}** fue ganado por **${winner.tag}**`);
+            }
+            
         }, duracion * 60000);
         
         return;
     }
   }
 
-  // ===== LÓGICA DE BOTONES (TICKETS Y SORTEOS) =====
+  // ===== LÓGICA DE BOTONES (TICKETS) =====
   if (!interaction.isButton()) return;
-
-  // Lógica sorteo
-  if (interaction.customId === "participar_sorteo") {
-      // Nota: Esto solo funciona si el bot guarda en memoria quién presionó el botón.
-      // Como no hay base de datos, esto es complejo sin recargar el bot.
-      return interaction.reply({ content: "🎟️ Has entrado en el sorteo (Lógica de participantes en desarrollo).", ephemeral: true });
-  }
 
   if (interaction.customId === "crear_ticket") {
     const nombreCanal = `verificacion-${interaction.user.id}`;
