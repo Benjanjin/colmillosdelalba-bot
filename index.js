@@ -49,6 +49,42 @@ const ROLES_NOTIF = {
 
 let mensajeRolesGlobal = null;
 const msgTracker = new Map();
+// ===== NUEVO: GESTIÓN DE JUEGOS TTT =====
+const tttGames = new Map();
+
+// ===== NUEVO: FUNCIONES AUXILIARES TTT =====
+function checkWinner(board) {
+    const lines = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], // Horizontales
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], // Verticales
+        [0, 4, 8], [2, 4, 6]  // Diagonales
+    ];
+    for (const line of lines) {
+        const [a, b, c] = line;
+        if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+            return board[a];
+        }
+    }
+    return board.includes(null) ? null : 'tie';
+}
+
+function createBoardComponents(board) {
+    const rows = [];
+    for (let i = 0; i < 3; i++) {
+        const row = new ActionRowBuilder();
+        for (let j = 0; j < 3; j++) {
+            const index = i * 3 + j;
+            const button = new ButtonBuilder()
+                .setCustomId(`ttt_cell_${index}`)
+                .setLabel(board[index] || '➖')
+                .setStyle(board[index] ? ButtonStyle.Secondary : ButtonStyle.Primary)
+                .setDisabled(!!board[index]);
+            row.addComponents(button);
+        }
+        rows.push(row);
+    }
+    return rows;
+}
 
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
@@ -58,6 +94,8 @@ client.once("ready", async () => {
     { name: 'info', description: 'Información del bot' },
     { name: 'comandos', description: 'Ver lista completa de comandos' },
     { name: 'jugar', description: 'Adivina el número del 1 al 100' },
+    // ===== NUEVO: COMANDO TTT =====
+    { name: 'ttt', description: 'Jugar tres en raya', options: [{ name: 'usuario', description: 'Usuario a desafiar', type: 6, required: true }] },
     { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] },
     { name: 'directo', description: 'Anunciar directo', options: [{ name: 'enlace', description: 'Link del directo', type: 3, required: true }, { name: 'juego', description: 'Juego', type: 3, required: true }] },
     { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
@@ -375,6 +413,7 @@ client.on("interactionCreate", async (interaction) => {
 • \`/info\`: Información del bot.
 • \`/comandos\`: Ver esta lista.
 • \`/jugar\`: Juego de adivinar número.
+• \`/ttt @usuario\`: Jugar Tres en Raya.
 • \`/reglas\`: Normas del clan.
 • \`/miembros\`: Estadísticas de usuarios.
 • \`/suggest\`: Enviar sugerencia.
@@ -417,6 +456,23 @@ client.on("interactionCreate", async (interaction) => {
             } else {
                 m.reply('⬇️ Más bajo.');
             }
+        });
+        return;
+    }
+
+    // ===== NUEVO: LÓGICA TTT COMMAND =====
+    if (commandName === "ttt") {
+        const target = options.getMember("usuario");
+        if (target.user.bot) return interaction.reply("❌ No puedes jugar contra bots.");
+        if (target.id === member.id) return interaction.reply("❌ No puedes jugar contra ti mismo.");
+
+        const acceptButton = new ButtonBuilder().setCustomId(`ttt_accept_${member.id}`).setLabel("Aceptar").setStyle(ButtonStyle.Success);
+        const rejectButton = new ButtonBuilder().setCustomId(`ttt_reject_${member.id}`).setLabel("Rechazar").setStyle(ButtonStyle.Danger);
+        const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
+
+        await interaction.reply({
+            content: `${target}, ${member} te ha desafiado a un Tres en Raya.`,
+            components: [row]
         });
         return;
     }
@@ -719,9 +775,76 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
     }
   }
 
-  // ===== LÓGICA DE BOTONES (TICKETS) =====
+  // ===== LÓGICA DE BOTONES (TICKETS Y TTT) =====
   if (!interaction.isButton()) return;
 
+  // ===== NUEVO: LÓGICA BOTONES TTT =====
+  if (interaction.customId.startsWith("ttt_")) {
+      const customId = interaction.customId;
+
+      // Aceptar/Rechazar desafío
+      if (customId.startsWith("ttt_accept_") || customId.startsWith("ttt_reject_")) {
+          const challengerId = customId.split("_")[2];
+          const acceptorId = interaction.user.id;
+          const challenger = await interaction.guild.members.fetch(challengerId);
+
+          if (customId.startsWith("ttt_reject_")) {
+              await interaction.update({ content: `❌ ${interaction.user} rechazó el desafío.`, components: [] });
+              return;
+          }
+
+          // Iniciar juego
+          const board = Array(9).fill(null);
+          const gameData = {
+              board,
+              player1: challengerId,
+              player2: acceptorId,
+              turn: challengerId,
+              message: null
+          };
+          tttGames.set(interaction.message.id, gameData);
+
+          const msg = await interaction.update({
+              content: `🎮 **Tres en Raya**\nTurno de: <@${challengerId}> (❌)`,
+              components: createBoardComponents(board)
+          });
+          gameData.message = msg;
+          return;
+      }
+
+      // Clics en el tablero
+      if (customId.startsWith("ttt_cell_")) {
+          const gameData = tttGames.get(interaction.message.id);
+          if (!gameData) return interaction.reply({content: "❌ Juego no encontrado.", ephemeral: true});
+          if (interaction.user.id !== gameData.turn) return interaction.reply({content: "❌ No es tu turno.", ephemeral: true});
+
+          const index = parseInt(customId.split("_")[2]);
+          gameData.board[index] = gameData.turn === gameData.player1 ? "❌" : "⭕";
+          
+          const winner = checkWinner(gameData.board);
+          
+          if (winner) {
+              tttGames.delete(interaction.message.id);
+              let resultText = winner === 'tie' ? "🤝 ¡Empate!" : `🏆 ¡<@${winner === '❌' ? gameData.player1 : gameData.player2}> ha ganado!`;
+              await interaction.update({
+                  content: `🎮 **Juego Finalizado**\n${resultText}`,
+                  components: createBoardComponents(gameData.board).map(row => {
+                      row.components.forEach(btn => btn.setDisabled(true));
+                      return row;
+                  })
+              });
+          } else {
+              gameData.turn = gameData.turn === gameData.player1 ? gameData.player2 : gameData.player1;
+              await interaction.update({
+                  content: `🎮 **Tres en Raya**\nTurno de: <@${gameData.turn}> (${gameData.turn === gameData.player1 ? '❌' : '⭕'})`,
+                  components: createBoardComponents(gameData.board)
+              });
+          }
+          return;
+      }
+  }
+
+  // ===== LÓGICA BOTONES TICKETS =====
   if (interaction.customId === "crear_ticket") {
     const nombreCanal = `verificacion-${interaction.user.id}`;
     const existingChannel = interaction.guild.channels.cache.find(c => c.name === nombreCanal);
@@ -759,7 +882,7 @@ Las solicitudes incompletas o poco serias serán rechazadas.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🚻  Sexo:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌎  Región / País:
+🌎  Region / País:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎮  Especialidad Principal:
 (Constructor • Redstone • PvP • Estratega • Técnico • Explorador • Otro)
