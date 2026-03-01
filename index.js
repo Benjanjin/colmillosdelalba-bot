@@ -460,12 +460,13 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== NUEVO: LÓGICA TTT COMMAND =====
+    // ===== NUEVO: LÓGICA TTT COMMAND (CORREGIDO) =====
     if (commandName === "ttt") {
         const target = options.getMember("usuario");
         if (target.user.bot) return interaction.reply("❌ No puedes jugar contra bots.");
         if (target.id === member.id) return interaction.reply("❌ No puedes jugar contra ti mismo.");
 
+        // Guardamos el ID del desafiador para asegurar que solo el desafiado acepte
         const acceptButton = new ButtonBuilder().setCustomId(`ttt_accept_${member.id}`).setLabel("Aceptar").setStyle(ButtonStyle.Success);
         const rejectButton = new ButtonBuilder().setCustomId(`ttt_reject_${member.id}`).setLabel("Rechazar").setStyle(ButtonStyle.Danger);
         const row = new ActionRowBuilder().addComponents(acceptButton, rejectButton);
@@ -778,7 +779,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
   // ===== LÓGICA DE BOTONES (TICKETS Y TTT) =====
   if (!interaction.isButton()) return;
 
-  // ===== NUEVO: LÓGICA BOTONES TTT =====
+  // ===== NUEVO: LÓGICA BOTONES TTT (CORREGIDO) =====
   if (interaction.customId.startsWith("ttt_")) {
       const customId = interaction.customId;
 
@@ -786,7 +787,11 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       if (customId.startsWith("ttt_accept_") || customId.startsWith("ttt_reject_")) {
           const challengerId = customId.split("_")[2];
           const acceptorId = interaction.user.id;
-          const challenger = await interaction.guild.members.fetch(challengerId);
+
+          // CORRECCIÓN: Evitar auto-aceptación
+          if (acceptorId === challengerId) {
+            return interaction.reply({ content: "❌ No puedes aceptar tu propio desafío.", ephemeral: true });
+          }
 
           if (customId.startsWith("ttt_reject_")) {
               await interaction.update({ content: `❌ ${interaction.user} rechazó el desafío.`, components: [] });
@@ -797,15 +802,15 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
           const board = Array(9).fill(null);
           const gameData = {
               board,
-              player1: challengerId,
-              player2: acceptorId,
-              turn: challengerId,
+              player1: challengerId, // Desafía
+              player2: acceptorId,   // Acepta
+              turn: challengerId,    // X empieza
               message: null
           };
           tttGames.set(interaction.message.id, gameData);
 
           const msg = await interaction.update({
-              content: `🎮 **Tres en Raya**\nTurno de: <@${challengerId}> (❌)`,
+              content: `🎮 **Tres en Raya**\n<@${challengerId}> vs <@${acceptorId}>\nTurno de: <@${challengerId}> (❌)`,
               components: createBoardComponents(board)
           });
           gameData.message = msg;
@@ -816,9 +821,16 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       if (customId.startsWith("ttt_cell_")) {
           const gameData = tttGames.get(interaction.message.id);
           if (!gameData) return interaction.reply({content: "❌ Juego no encontrado.", ephemeral: true});
+          
+          // CORRECCIÓN: Validar turno y jugador
           if (interaction.user.id !== gameData.turn) return interaction.reply({content: "❌ No es tu turno.", ephemeral: true});
+          if (interaction.user.id !== gameData.player1 && interaction.user.id !== gameData.player2) return interaction.reply({content: "❌ No estás jugando esta partida.", ephemeral: true});
 
           const index = parseInt(customId.split("_")[2]);
+          
+          // CORRECCIÓN: Validar casilla ocupada
+          if (gameData.board[index]) return interaction.reply({content: "❌ Esta casilla ya está ocupada.", ephemeral: true});
+
           gameData.board[index] = gameData.turn === gameData.player1 ? "❌" : "⭕";
           
           const winner = checkWinner(gameData.board);
@@ -836,7 +848,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
           } else {
               gameData.turn = gameData.turn === gameData.player1 ? gameData.player2 : gameData.player1;
               await interaction.update({
-                  content: `🎮 **Tres en Raya**\nTurno de: <@${gameData.turn}> (${gameData.turn === gameData.player1 ? '❌' : '⭕'})`,
+                  content: `🎮 **Tres en Raya**\n<@${gameData.player1}> vs <@${gameData.player2}>\nTurno de: <@${gameData.turn}> (${gameData.turn === gameData.player1 ? '❌' : '⭕'})`,
                   components: createBoardComponents(gameData.board)
               });
           }
