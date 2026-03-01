@@ -15,6 +15,7 @@ const client = new Client({
 // ===== CONFIG =====
 const STAFF_ROLE_ID = "1463268597085507717";
 const CLAN_ROLE_ID = "1459687732417921227";
+const MUTE_ROLE_ID = "ID_DEL_ROL_MUTE"; // <--- CAMBIA ESTO POR EL ID REAL
 const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
@@ -45,6 +46,8 @@ client.once("ready", async () => {
     { name: 'comandos', description: 'Ver lista completa de comandos' },
     { name: 'jugar', description: 'Adivina el número del 1 al 100' }, // NUEVO
     { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] }, // NUEVO
+    { name: 'directo', description: 'Anunciar directo', options: [{ name: 'enlace', description: 'Link del directo', type: 3, required: true }, { name: 'juego', description: 'Juego', type: 3, required: true }] }, // NUEVO
+    { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] }, // NUEVO
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
     { name: 'top', description: 'Ver el top de miembros' },
@@ -258,6 +261,8 @@ client.on("interactionCreate", async (interaction) => {
 • \`/stats\`: Ver estadísticas.
 
 **Comandos de Staff:**
+• \`/directo\`: Anunciar directo (Staff).
+• \`/mute\`: Mutear usuario (Staff).
 • \`/chamba\`: Enviar mensaje decorado.
 • \`/anunciar\`: Mandar aviso oficial.
 • \`/kick\`: Expulsar usuario.
@@ -306,6 +311,44 @@ client.on("interactionCreate", async (interaction) => {
         
         await interaction.reply({ content: "✅ Mensaje de chamba enviado.", ephemeral: true });
         await interaction.channel.send({ embeds: [embedChamba] });
+        return;
+    }
+
+    // ===== DIRECTO (NUEVO) =====
+    if (commandName === "directo") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        const enlace = options.getString("enlace");
+        const juego = options.getString("juego");
+        const embedDirecto = new EmbedBuilder()
+            .setTitle("🎥 ¡ESTAMOS EN DIRECTO! 🎥")
+            .setDescription(`**${interaction.user.username}** está transmitiendo **${juego}**.\n\n👉 [¡Click aquí para verlo!](${enlace})`)
+            .setColor(0x9146FF)
+            .setImage(IMAGEN_FORMULARIO)
+            .setTimestamp();
+        
+        await interaction.reply({ content: "✅ Anuncio de directo enviado.", ephemeral: true });
+        await interaction.channel.send({ content: "@everyone", embeds: [embedDirecto] });
+        return;
+    }
+
+    // ===== MUTE (NUEVO) =====
+    if (commandName === "mute") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        const target = options.getMember("usuario");
+        const tiempo = options.getInteger("tiempo");
+        const razon = options.getString("razon") || "No especificada";
+
+        if (!target) return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
+
+        const muteRole = guild.roles.cache.get(MUTE_ROLE_ID);
+        if (!muteRole) return interaction.reply({ content: "❌ No se encontró el rol de muteo.", ephemeral: true });
+
+        await target.roles.add(muteRole);
+        await interaction.reply({ embeds: [new EmbedBuilder().setTitle("🔇 Usuario Muteado").setDescription(`**Usuario:** ${target.user.tag}\n**Tiempo:** ${tiempo} min\n**Razón:** ${razon}`).setColor(0xFFA500)] });
+
+        setTimeout(async () => {
+            await target.roles.remove(muteRole).catch(() => {});
+        }, tiempo * 60000);
         return;
     }
 
@@ -393,7 +436,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       if (interaction.channel.id !== CANAL_COMANDOS) {
         return interaction.reply({ content: "❌ Este comando solo se puede usar en el canal de comandos.", ephemeral: true });
       }
-      const texto = interaction.options.getString("texto");
+      const texto = options.getString("texto");
       const canalSugerencias = await client.channels.fetch(CANAL_SUGERENCIAS);
       const embedSugerencia = new EmbedBuilder()
         .setTitle("📌 Nueva Sugerencia")
