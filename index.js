@@ -219,7 +219,7 @@ if (interaction.commandName === "info") {
     embeds: [
       new EmbedBuilder()
         .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
-        .setDescription("Creado y personalizado desde 0 por el usuario **1fsi.**.\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi.**.")
+        .setDescription("Creado y personalizado desde 0 por el usuario **1fsi.**\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi.**.")
         .setColor(0x8B0000)
         .setFooter({ text: "ColmillosDelAlba 2026" })
     ]
