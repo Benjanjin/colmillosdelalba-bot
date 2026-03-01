@@ -581,8 +581,39 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       await interaction.reply({ content: "✅ Tu sugerencia fue enviada correctamente.", ephemeral: true });
     }
 
-    if (commandName === "top" || commandName === "stats") {
-      return interaction.reply({ content: "📊 Comando en desarrollo.", ephemeral: true });
+    // ===== COMANDO /STATS (INTEGRADO) =====
+    if (commandName === "stats") {
+        const targetMember = options.getMember("usuario") || member;
+        
+        const joinedAt = targetMember.joinedAt.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const roles = targetMember.roles.cache
+            .filter(role => role.id !== guild.id)
+            .map(role => `<@&${role.id}>`)
+            .join(', ') || 'Ninguno';
+
+        const embedStats = new EmbedBuilder()
+            .setTitle(`📊 Estadísticas de ${targetMember.user.username}`)
+            .setThumbnail(targetMember.user.displayAvatarURL({ dynamic: true }))
+            .setColor(0x8B0000)
+            .addFields(
+                { name: '👤 Usuario', value: `${targetMember.user.tag}`, inline: true },
+                { name: '🆔 ID', value: `${targetMember.user.id}`, inline: true },
+                { name: '📅 Se unió el', value: `${joinedAt}`, inline: true },
+                { name: '🛡️ Roles', value: roles }
+            )
+            .setFooter({ text: `Consultado por ${interaction.user.tag}` })
+            .setTimestamp();
+
+        return interaction.reply({ embeds: [embedStats] });
+    }
+
+    if (commandName === "top") {
+        return interaction.reply({ content: "📊 Comando en desarrollo.", ephemeral: true });
     }
 
     // ===== LÓGICA COMANDO /SORTEO (MEJORADA) =====
