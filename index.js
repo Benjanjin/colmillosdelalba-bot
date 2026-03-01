@@ -82,7 +82,7 @@ client.once("ready", async () => {
   mensajeRolesGlobal = mensajeRoles;
 });
 
-// ===== REACCIONES (MODIFICADO SOLO ESTO) =====
+// ===== REACCIONES =====
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
@@ -131,16 +131,6 @@ client.on("messageReactionRemove", async (reaction, user) => {
 client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
-
-  if (!message.guild) {
-    const embedDM = new EmbedBuilder()
-      .setTitle("🤖 Información del Bot")
-      .setDescription("**Creado por 1fsi**\n\nVenta de bots personalizados.\nDiscord: **1fsi**")
-      .setColor(0x00AEFF);
-
-    await message.reply({ embeds: [embedDM] });
-    return;
-  }
 
   if (message.channel.id === CANAL_AVISOS) {
 
