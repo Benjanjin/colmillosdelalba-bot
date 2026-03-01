@@ -28,6 +28,10 @@ const CANAL_BIENVENIDAS = "1459690080607146167";
 const CANAL_DIRECTOS = "1477722071202004992";
 const CANAL_LOGS = "1462534103063724062"; // <--- CANAL DE REGISTROS
 
+// IDs DE ROLES PARA MENCIONES
+const ROL_AVISOS = "1477748637202382888";
+const ROL_DIRECTOS = "1477748975603023873";
+
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
 const ROLES_REACCIONES = {
@@ -415,7 +419,8 @@ client.on("interactionCreate", async (interaction) => {
             .setTimestamp();
         
         await interaction.reply({ content: `✅ Anuncio de directo enviado a <#${CANAL_DIRECTOS}>.`, ephemeral: true });
-        await canalDirectos.send({ content: "@everyone", embeds: [embedDirecto] });
+        // CAMBIO: Mención de rol en lugar de everyone
+        await canalDirectos.send({ content: `<@&${ROL_DIRECTOS}>`, embeds: [embedDirecto] });
         return;
     }
 
@@ -538,8 +543,9 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ No eres staff.", ephemeral: true });
       const canalAvisos = guild.channels.cache.get(CANAL_AVISOS);
       const m = options.getString("mensaje");
+      // CAMBIO: Mención de rol en lugar de everyone
       await canalAvisos.send({ 
-        content: "@everyone", 
+        content: `<@&${ROL_AVISOS}>`, 
         embeds: [new EmbedBuilder().setTitle("📢 ANUNCIO OFICIAL").setDescription(m).setColor(0xFF0000).setImage(IMAGEN_FORMULARIO).setTimestamp()] 
       });
       return interaction.reply({ content: "✅ Anuncio enviado.", ephemeral: true });
