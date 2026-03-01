@@ -1,4 +1,5 @@
 const { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const axios = require('axios');
 
 const client = new Client({
   intents: [
