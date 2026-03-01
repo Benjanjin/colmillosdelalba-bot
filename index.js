@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -22,6 +22,7 @@ const CANAL_AVISOS = "1462533102130958437";
 const CANAL_ROLES = "1464335122005491745";
 const CANAL_SUGERENCIAS = "1477005989096984646";
 const CANAL_COMANDOS = "1476614389749649523";
+const CANAL_BIENVENIDAS = "1459690080607146167"; // ID DE BIENVENIDAS
 
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
@@ -42,6 +43,8 @@ client.once("ready", async () => {
   const commands = [
     { name: 'info', description: 'Información del bot' },
     { name: 'comandos', description: 'Ver lista completa de comandos' },
+    { name: 'jugar', description: 'Adivina el número del 1 al 100' }, // NUEVO
+    { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] }, // NUEVO
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
     { name: 'top', description: 'Ver el top de miembros' },
@@ -96,6 +99,22 @@ client.once("ready", async () => {
     }
   }
   mensajeRolesGlobal = mensajeRoles;
+});
+
+// ===== BIENVENIDAS (NUEVO) =====
+client.on(Events.GuildMemberAdd, async member => {
+    const channel = member.guild.channels.cache.get(CANAL_BIENVENIDAS);
+    if (!channel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("👋 ¡Nuevo miembro!")
+        .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐺`)
+        .setColor(0x00FF00)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: `Eres el miembro #${member.guild.memberCount}` })
+        .setTimestamp();
+    
+    channel.send({ content: `¡Bienvenido <@${member.id}>!`, embeds: [embed] });
 });
 
 // ===== REACCIONES ORIGINALES =====
@@ -231,6 +250,7 @@ client.on("interactionCreate", async (interaction) => {
 **Comandos Públicos:**
 • \`/info\`: Información del bot.
 • \`/comandos\`: Ver esta lista.
+• \`/jugar\`: Juego de adivinar número.
 • \`/reglas\`: Normas del clan.
 • \`/miembros\`: Estadísticas de usuarios.
 • \`/suggest\`: Enviar sugerencia.
@@ -238,12 +258,55 @@ client.on("interactionCreate", async (interaction) => {
 • \`/stats\`: Ver estadísticas.
 
 **Comandos de Staff:**
+• \`/chamba\`: Enviar mensaje decorado.
 • \`/anunciar\`: Mandar aviso oficial.
 • \`/kick\`: Expulsar usuario.
 • \`/ban\`: Banear usuario.
 • \`/warn\`: Advertir usuario.`)
         .setColor(0x8B0000);
       return interaction.reply({ embeds: [embedComandos] });
+    }
+
+    // ===== JUGAR (NUEVO) =====
+    if (commandName === "jugar") {
+        const number = Math.floor(Math.random() * 100) + 1;
+        let attempts = 0;
+        await interaction.reply(`¡Hola <@${interaction.user.id}>! He pensado un número del 1 al 100. ¡Adivínalo!`);
+        
+        const collector = interaction.channel.createMessageCollector({ time: 60000 });
+        collector.on('collect', async m => {
+            if (m.author.bot) return;
+            attempts++;
+            const guess = parseInt(m.content);
+            if (isNaN(guess)) return;
+
+            if (guess === number) {
+                m.reply(`🎉 ¡Correcto <@${m.author.id}>! Adivinaste el número **${number}** en ${attempts} intentos.`);
+                collector.stop();
+            } else if (guess < number) {
+                m.reply('⬆️ Más alto.');
+            } else {
+                m.reply('⬇️ Más bajo.');
+            }
+        });
+        return;
+    }
+
+    // ===== CHAMBA (NUEVO) =====
+    if (commandName === "chamba") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        const text = options.getString("mensaje");
+        const embedChamba = new EmbedBuilder()
+            .setTitle("🔨 AVISO DE CHAMBA 🔨")
+            .setDescription(text)
+            .setColor(0xFFFF00)
+            .setImage(IMAGEN_FORMULARIO)
+            .setFooter({ text: "Att: El esclavizador" })
+            .setTimestamp();
+        
+        await interaction.reply({ content: "✅ Mensaje de chamba enviado.", ephemeral: true });
+        await interaction.channel.send({ embeds: [embedChamba] });
+        return;
     }
 
     if (commandName === "reglas") {
@@ -278,7 +341,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
 - Mantenerse activo en Discord y en dioses.mc
 - Avisar si vas a estar inactivo por un tiempo
 
-:seven: :bow_and_arrow: :small_blue_diamond: **Respeto al lider**
+:seven: :bow_arrow: :small_blue_diamond: **Respeto al lider**
 - Líder: **guepar**
 - Seguir sus decisiones y sugerencias
 - Proponer ideas de manera respetuosa y constructiva
