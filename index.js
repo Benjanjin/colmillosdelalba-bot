@@ -114,6 +114,25 @@ client.on("messageReactionAdd", async (reaction, user) => {
   }
 
   await member.roles.add(roleId).catch(() => {});
+    // ===== MENSAJE CUANDO ELIGE ROL (AÑADIDO) =====
+  const rol = reaction.message.guild.roles.cache.get(roleId);
+
+  const embedConfirmacion = new EmbedBuilder()
+    .setTitle("⚔️ Rol Asignado")
+    .setDescription(`Has elegido el rol **${rol.name}** y se te ha añadido correctamente.
+
+Att: ColmillosDelAlba Administración`)
+    .setColor(0x00FF00)
+    .setTimestamp();
+
+  const mensajeConfirmacion = await reaction.message.channel.send({
+    content: `<@${user.id}>`,
+    embeds: [embedConfirmacion]
+  });
+
+  setTimeout(() => {
+    mensajeConfirmacion.delete().catch(() => {});
+  }, 5000);
 });
 
 client.on("messageReactionRemove", async (reaction, user) => {
