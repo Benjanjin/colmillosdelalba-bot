@@ -38,9 +38,10 @@ const msgTracker = new Map(); // Para el sistema de anti-spam
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
-  // Registro de todos los Slash Commands solicitados
+  // Registro de todos los Slash Commands incluyendo el nuevo de comandos
   const commands = [
     { name: 'info', description: 'Información del bot' },
+    { name: 'comandos', description: 'Ver lista completa de comandos' },
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
     { name: 'top', description: 'Ver el top de miembros' },
@@ -151,15 +152,9 @@ client.on("messageReactionRemove", async (reaction, user) => {
   await member.roles.remove(roleId).catch(() => {});
 });
 
-// ===== AUTOMODERACIÓN Y MENSAJES =====
+// ===== AUTOMODERACIÓN Y MENSAJES (FILTRO DE MAYÚSCULAS ELIMINADO) =====
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
-
-  // Filtro Mayúsculas (>7 seguidas)
-  if (/[A-ZÁÉÍÓÚÑ]{8,}/.test(message.content)) {
-    await message.delete().catch(() => {});
-    return message.channel.send(`⚠️ <@${message.author.id}>, evita gritar (uso de mayúsculas).`).then(m => setTimeout(() => m.delete(), 3000));
-  }
 
   // Anti-Spam (5 mensajes idénticos)
   const uid = message.author.id;
@@ -229,6 +224,28 @@ client.on("interactionCreate", async (interaction) => {
       });
     }
 
+    if (commandName === "comandos") {
+      const embedComandos = new EmbedBuilder()
+        .setTitle("📜 Lista de Comandos")
+        .setDescription(`
+**Comandos Públicos:**
+• \`/info\`: Información del bot.
+• \`/comandos\`: Ver esta lista.
+• \`/reglas\`: Normas del clan.
+• \`/miembros\`: Estadísticas de usuarios.
+• \`/suggest\`: Enviar sugerencia.
+• \`/top\`: Top miembros (en desarrollo).
+• \`/stats\`: Ver estadísticas.
+
+**Comandos de Staff:**
+• \`/anunciar\`: Mandar aviso oficial.
+• \`/kick\`: Expulsar usuario.
+• \`/ban\`: Banear usuario.
+• \`/warn\`: Advertir usuario.`)
+        .setColor(0x8B0000);
+      return interaction.reply({ embeds: [embedComandos] });
+    }
+
     if (commandName === "reglas") {
       const embedReglas = new EmbedBuilder()
         .setTitle("╔═══════ ≪ ° 🐺 ° ≫ ═══════╗\n    NORMAS COLMILLOS DEL ALBA\n╚═══════ ≪ ° 🐺 ° ≫ ═══════╝")
@@ -291,7 +308,6 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       return interaction.reply({ content: "✅ Anuncio enviado.", ephemeral: true });
     }
 
-    // Comandos kick/ban/warn con estética
     if (["kick", "ban", "warn"].includes(commandName)) {
       if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
       const target = options.getUser("usuario");
@@ -333,7 +349,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
     }
   }
 
-  // ===== LÓGICA DE BOTONES (TICKETS COMPLETO) =====
+  // ===== LÓGICA DE BOTONES (TICKETS COMPLETO CON FORMULARIO) =====
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "crear_ticket") {
@@ -354,49 +370,48 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
       ]
     });
 
-    // FORMULARIO SIN RECORTAR
     const embedFormulario = new EmbedBuilder()
       .setTitle("⚔ COLMILLOS DEL ALBA ⚔")
       .setDescription(`╔══════════════════════════════════╗
-            ⚔  COLMILLOS DEL ALBA  ⚔
+            ⚔  COLMILLOS DEL ALBA  ⚔
 ╚══════════════════════════════════╝
 
-    **━━━  PROCESO DE RECLUTAMIENTO OFICIAL  ━━━**
+    **━━━  PROCESO DE RECLUTAMIENTO OFICIAL  ━━━**
 
 Buscamos miembros con disciplina, constancia y mentalidad de equipo.
 Las solicitudes incompletas o poco serias serán rechazadas.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-👤  Nick en Minecraft:
+👤  Nick en Minecraft:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎂  Edad:
+🎂  Edad:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🚻  Sexo:
+🚻  Sexo:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🌎  Región / País:
+🌎  Región / País:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎮  Especialidad Principal:
+🎮  Especialidad Principal:
 (Constructor • Redstone • PvP • Estratega • Técnico • Explorador • Otro)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚔  Nivel aproximado en PvP:
+⚔  Nivel aproximado en PvP:
 (Bajo • Medio • Alto • Competitivo)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏳  Años de experiencia en Minecraft:
+⏳  Años de experiencia en Minecraft:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⏰  Disponibilidad semanal:
+⏰  Disponibilidad semanal:
 (Días activos y horarios aproximados)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎤  ¿Dispones de micrófono y actividad en Discord?
+🎤  ¿Dispones de micrófono y actividad en Discord?
 (Sí / No — Especificar)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠  IMPORTANTE
+⚠  IMPORTANTE
 El ingreso no está garantizado.
 Se evaluará actitud, nivel, compromiso y comportamiento.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        ⚔  FORJAMOS LEALTAD Y PODER  ⚔
+        ⚔  FORJAMOS LEALTAD Y PODER  ⚔
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
