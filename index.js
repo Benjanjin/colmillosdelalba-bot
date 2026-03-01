@@ -15,7 +15,7 @@ const client = new Client({
 // ===== CONFIG =====
 const STAFF_ROLE_ID = "1463268597085507717";
 const CLAN_ROLE_ID = "1459687732417921227";
-const MUTE_ROLE_ID = "ID_DEL_ROL_MUTE"; // <--- CAMBIA ESTO POR EL ID REAL
+const MUTE_ROLE_ID = "1477518735983251638"; // <--- ACTUALIZADO
 const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
@@ -24,6 +24,7 @@ const CANAL_ROLES = "1464335122005491745";
 const CANAL_SUGERENCIAS = "1477005989096984646";
 const CANAL_COMANDOS = "1476614389749649523";
 const CANAL_BIENVENIDAS = "1459690080607146167"; // ID DE BIENVENIDAS
+const CANAL_DIRECTOS = "1477722071202004992"; // <--- NUEVO CANAL AVISOS LIVES
 
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
@@ -65,6 +66,7 @@ client.once("ready", async () => {
             { name: 'razon', description: 'Razón', type: 3 }
         ] 
     },
+    { name: 'unmute', description: 'Quita el mute a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }] }, // <--- NUEVO
     
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
@@ -276,12 +278,12 @@ client.on("interactionCreate", async (interaction) => {
 • \`/reglas\`: Normas del clan.
 • \`/miembros\`: Estadísticas de usuarios.
 • \`/suggest\`: Enviar sugerencia.
-• \`/top\`: Top miembros (en desarrollo).
 • \`/stats\`: Ver estadísticas.
 
 **Comandos de Staff:**
 • \`/directo\`: Anunciar directo (Staff).
 • \`/mute\`: Mutear usuario (Staff).
+• \`/unmute\`: Desmutear usuario (Staff).
 • \`/chamba\`: Enviar mensaje decorado.
 • \`/anunciar\`: Mandar aviso oficial.
 • \`/kick\`: Expulsar usuario.
@@ -333,11 +335,15 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== DIRECTO (NUEVO) =====
+    // ===== DIRECTO (ACTUALIZADO A CANAL ESPECIFICO) =====
     if (commandName === "directo") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const enlace = options.getString("enlace");
         const juego = options.getString("juego");
+        
+        const canalDirectos = guild.channels.cache.get(CANAL_DIRECTOS);
+        if (!canalDirectos) return interaction.reply({ content: "❌ Canal de directos no encontrado.", ephemeral: true });
+
         const embedDirecto = new EmbedBuilder()
             .setTitle("🎥 ¡ESTAMOS EN DIRECTO! 🎥")
             .setDescription(`**${interaction.user.username}** está transmitiendo **${juego}**.\n\n👉 [¡Click aquí para verlo!](${enlace})`)
@@ -345,12 +351,12 @@ client.on("interactionCreate", async (interaction) => {
             .setImage(IMAGEN_FORMULARIO)
             .setTimestamp();
         
-        await interaction.reply({ content: "✅ Anuncio de directo enviado.", ephemeral: true });
-        await interaction.channel.send({ content: "@everyone", embeds: [embedDirecto] });
+        await interaction.reply({ content: `✅ Anuncio de directo enviado a <#${CANAL_DIRECTOS}>.`, ephemeral: true });
+        await canalDirectos.send({ content: "@everyone", embeds: [embedDirecto] });
         return;
     }
 
-    // ===== MUTE (NUEVO) =====
+    // ===== MUTE (ROL ACTUALIZADO) =====
     if (commandName === "mute") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const target = options.getMember("usuario");
@@ -368,6 +374,20 @@ client.on("interactionCreate", async (interaction) => {
         setTimeout(async () => {
             await target.roles.remove(muteRole).catch(() => {});
         }, tiempo * 60000);
+        return;
+    }
+
+    // ===== UNMUTE (NUEVO) =====
+    if (commandName === "unmute") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        const target = options.getMember("usuario");
+        if (!target) return interaction.reply({ content: "❌ Usuario no encontrado.", ephemeral: true });
+
+        const muteRole = guild.roles.cache.get(MUTE_ROLE_ID);
+        if (!muteRole) return interaction.reply({ content: "❌ No se encontró el rol de muteo.", ephemeral: true });
+
+        await target.roles.remove(muteRole);
+        await interaction.reply({ embeds: [new EmbedBuilder().setTitle("🔊 Usuario Desmuteado").setDescription(`**Usuario:** ${target.user.tag}`).setColor(0x00FF00)] });
         return;
     }
 
