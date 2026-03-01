@@ -335,8 +335,8 @@ client.on("interactionCreate", async (interaction) => {
 • \`/stats\`: Ver estadísticas.
 
 **Comandos de Staff:**
-• \`/clear\`: Borrar mensajes.
-• \`/role add\`: Añadir rol a usuario.
+• \`/clear [cantidad]\`: Borrar mensajes.
+• \`/role add [usuario] [rol]\`: Añadir rol a usuario.
 • \`/directo\`: Anunciar directo.
 • \`/mute\`: Mutear usuario.
 • \`/unmute\`: Desmutear usuario.
