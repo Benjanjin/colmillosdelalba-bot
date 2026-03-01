@@ -59,7 +59,9 @@ client.once("ready", async () => {
     { name: 'warn', description: 'Advertir usuario', options: [{ name: 'usuario', description: 'Usuario a advertir', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] }
   ];
 
+  // IMPORTANTE: ESTA LÍNEA DEBERÍA ACTUALIZARLOS
   await client.application.commands.set(commands);
+  console.log("Comandos slash actualizados en Discord.");
 
   const canal = await client.channels.fetch(CANAL_INICIAL);
   const mensajes = await canal.messages.fetch({ limit: 20 });
