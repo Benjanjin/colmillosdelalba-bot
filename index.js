@@ -84,6 +84,11 @@ client.once("ready", async () => {
   mensajeRolesGlobal = mensajeRoles;
     // ===== REGISTRAR COMANDO /suggest =====
   await client.application.commands.create({
+    // ===== REGISTRAR COMANDO /info =====
+await client.application.commands.create({
+  name: "info",
+  description: "Información del bot"
+});
     name: "suggest",
     description: "Enviar una sugerencia al servidor",
     options: [
@@ -165,6 +170,18 @@ client.on("messageReactionRemove", async (reaction, user) => {
 client.on("messageCreate", async (message) => {
 
   if (message.author.bot) return;
+  // ===== RESPONDER SI MENCIONAN AL BOT =====
+if (message.mentions.has(client.user)) {
+  return message.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
+        .setDescription("Creado y personalizado desde 0 por el usuario **1fsi**.\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi**.")
+        .setColor(0x8B0000)
+        .setFooter({ text: "ColmillosDelAlba 2026" })
+    ]
+  });
+}
 
   if (!message.guild) {
     const embedDM = new EmbedBuilder()
@@ -194,7 +211,18 @@ client.on("messageCreate", async (message) => {
 
 client.on("interactionCreate", async (interaction) => {
     if (interaction.isChatInputCommand()) {
-
+      
+if (interaction.commandName === "info") {
+  return interaction.reply({
+    embeds: [
+      new EmbedBuilder()
+        .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
+        .setDescription("Creado y personalizado desde 0 por el usuario **1fsi.**.\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi.**.")
+        .setColor(0x8B0000)
+        .setFooter({ text: "ColmillosDelAlba 2026" })
+    ]
+  });
+}
     if (interaction.commandName === "suggest") {
 
       if (interaction.channel.id !== CANAL_COMANDOS) {
