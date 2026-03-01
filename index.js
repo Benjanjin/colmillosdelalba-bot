@@ -410,14 +410,440 @@ client.on("interactionCreate", async (interaction) => {
             if (isNaN(guess)) return;
 
             if (guess === number) {
-                m.reply(`🎉 ¡Correcto <@${m.author.id}>! Adivinaste el número **${number}** en ${attempts} intentos.`);
+const { Client, GatewayIntentBits, Partials, ChannelType, PermissionsBitField, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, SlashCommandBuilder, Events } = require('discord.js');
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildModeration // Necesario para logs de baneos/kicks
+  ],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction]
+});
+
+// ===== CONFIG =====
+const STAFF_ROLE_ID = "1463268597085507717";
+const CLAN_ROLE_ID = "1459687732417921227";
+const MUTE_ROLE_ID = "1477518735983251638";
+const CANAL_INICIAL = "1476978880672956428";
+const CATEGORIA_TICKETS = "1477154960343826512";
+const CATEGORIA_HISTORIAL = "1476973773579092151";
+const CANAL_AVISOS = "1462533102130958437";
+const CANAL_ROLES = "1464335122005491745";
+const CANAL_SUGERENCIAS = "1477005989096984646";
+const CANAL_COMANDOS = "1476614389749649523";
+const CANAL_BIENVENIDAS = "1459690080607146167";
+const CANAL_DIRECTOS = "1477722071202004992";
+const CANAL_LOGS = "1462534103063724062"; // <--- CANAL DE REGISTROS
+
+// IDs DE ROLES PARA MENCIONES
+const ROL_AVISOS = "1477748637202382888";
+const ROL_DIRECTOS = "1477748975603023873";
+
+const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
+
+const ROLES_REACCIONES = {
+  "⚔️": "1464335696390263069",
+  "⚒️": "1464335639561506878",
+  "⚙️": "1464335746944209161",
+  "🏛️": "1464335746856128737"
+};
+
+// NUEVOS ROLES DE NOTIFICACIONES (Reacciones)
+const ROLES_NOTIF = {
+  "📢": ROL_AVISOS,
+  "🎥": ROL_DIRECTOS
+};
+
+let mensajeRolesGlobal = null;
+const msgTracker = new Map();
+
+client.once("ready", async () => {
+  console.log(`Bot listo como ${client.user.tag}`);
+
+  // Registro de Slash Commands actualizado
+  const commands = [
+    { name: 'info', description: 'Información del bot' },
+    { name: 'comandos', description: 'Ver lista completa de comandos' },
+    { name: 'jugar', description: 'Adivina el número del 1 al 100' },
+    { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] },
+    { name: 'directo', description: 'Anunciar directo', options: [{ name: 'enlace', description: 'Link del directo', type: 3, required: true }, { name: 'juego', description: 'Juego', type: 3, required: true }] },
+    { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
+    { name: 'unmute', description: 'Quita el mute a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }] },
+    
+    // NUEVOS COMANDOS SOLICITADOS
+    { name: 'clear', description: 'Borrar mensajes', options: [{ name: 'cantidad', description: 'Cantidad de mensajes a borrar', type: 4, required: true }] },
+    { name: 'role', description: 'Gestionar roles', options: [
+        { 
+            name: 'add', 
+            description: 'Añadir rol a un usuario', 
+            type: 1, 
+            options: [
+                { name: 'usuario', description: 'Usuario a gestionar', type: 6, required: true },
+                { name: 'rol', description: 'Rol a añadir', type: 8, required: true }
+            ]
+        }
+    ]},
+
+    { name: 'miembros', description: 'Ver miembros online y estadísticas' },
+    { name: 'reglas', description: 'Ver las normas del clan' },
+    { name: 'top', description: 'Ver el top de miembros' },
+    { name: 'stats', description: 'Ver estadísticas', options: [{ name: 'usuario', description: 'Usuario a ver', type: 6 }] },
+    { name: 'suggest', description: 'Enviar una sugerencia', options: [{ name: 'texto', description: 'Tu sugerencia', type: 3, required: true }] },
+    { name: 'anunciar', description: 'Mandar un aviso oficial', options: [{ name: 'mensaje', description: 'Contenido del aviso', type: 3, required: true }] },
+    { name: 'kick', description: 'Expulsar usuario', options: [{ name: 'usuario', description: 'Usuario a expulsar', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
+    { name: 'ban', description: 'Banear usuario', options: [{ name: 'usuario', description: 'Usuario a banear', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
+    { name: 'warn', description: 'Advertir usuario', options: [{ name: 'usuario', description: 'Usuario a advertir', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
+    
+    // COMANDO SORTEO AÑADIDO
+    { name: 'sorteo', description: 'Iniciar un sorteo', options: [
+        { name: 'premio', description: '¿Qué se sortea?', type: 3, required: true },
+        { name: 'duracion', description: 'Duración en minutos', type: 4, required: true }
+    ]}
+  ];
+
+  await client.application.commands.set(commands);
+  console.log("Comandos slash actualizados en Discord.");
+
+  const canal = await client.channels.fetch(CANAL_INICIAL);
+  const mensajes = await canal.messages.fetch({ limit: 20 });
+
+  const yaExiste = mensajes.find(
+    m => m.author.id === client.user.id && m.components.length > 0
+  );
+
+  if (!yaExiste) {
+    const boton = new ButtonBuilder()
+      .setCustomId("crear_ticket")
+      .setLabel("Solicitar verificación")
+      .setStyle(ButtonStyle.Primary);
+
+    const fila = new ActionRowBuilder().addComponents(boton);
+
+    await canal.send({
+      content: "Haz clic aquí para solicitar acceso al clan:",
+      components: [fila]
+    });
+  }
+
+  // ===== EMBED ROLES =====
+  const canalRoles = await client.channels.fetch(CANAL_ROLES);
+  const mensajesRoles = await canalRoles.messages.fetch({ limit: 15 });
+
+  // MENSAJE 1: Roles de Clase
+  let mensajeRoles = mensajesRoles.find(m => m.author.id === client.user.id && m.embeds[0]?.title?.includes("Roles"));
+
+  if (!mensajeRoles) {
+    const embedRoles = new EmbedBuilder()
+      .setTitle("╔══ ≪ ° Roles ° ≫ ══╗")
+      .setDescription(`『⚔️』<@&1464335696390263069>\n『⚒️』<@&1464335639561506878>\n『⚙️』<@&1464335746944209161>\n『🏛️』<@&1464335746856128737>`)
+      .setColor(0x8B0000)
+      .setImage(IMAGEN_FORMULARIO);
+
+    mensajeRoles = await canalRoles.send({ embeds: [embedRoles] });
+
+    for (const emoji of Object.keys(ROLES_REACCIONES)) {
+      await mensajeRoles.react(emoji);
+    }
+  }
+  mensajeRolesGlobal = mensajeRoles;
+
+  // MENSAJE 2: Roles de Notificaciones (NUEVO)
+  let mensajeNotif = mensajesRoles.find(m => m.author.id === client.user.id && m.embeds[0]?.title?.includes("Notificaciones"));
+  
+  if (!mensajeNotif) {
+      const embedNotif = new EmbedBuilder()
+        .setTitle("╔══ ≪ ° Notificaciones ° ≫ ══╗")
+        .setDescription(`Selecciona cómo quieres recibir las actualizaciones:\n\n📢 <@&${ROL_AVISOS}> - Avisos Generales\n🎥 <@&${ROL_DIRECTOS}> - Notificaciones de Directos\n\n*Obligatorio elegir al menos uno.*`)
+        .setColor(0x00FF00);
+
+      mensajeNotif = await canalRoles.send({ content: "@everyone", embeds: [embedNotif] });
+      for (const emoji of Object.keys(ROLES_NOTIF)) {
+          await mensajeNotif.react(emoji);
+      }
+  }
+});
+
+// ===== SISTEMA DE LOGS (REGISTROS) =====
+client.on(Events.MessageDelete, async (message) => {
+    if (!message.guild || message.author?.bot) return;
+    const logChannel = message.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("🗑️ Mensaje Eliminado")
+        .setDescription(`**Autor:** ${message.author.tag} (${message.author.id})\n**Canal:** <#${message.channel.id}>\n**Mensaje:** ${message.content || "No hay texto"}`)
+        .setColor(0xFF0000)
+        .setTimestamp();
+    logChannel.send({ embeds: [embed] });
+});
+
+client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    if (!oldMessage.guild || oldMessage.author?.bot || oldMessage.content === newMessage.content) return;
+    const logChannel = oldMessage.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("✏️ Mensaje Editado")
+        .setDescription(`**Autor:** ${oldMessage.author.tag}\n**Canal:** <#${oldMessage.channel.id}>\n**Antiguo:** ${oldMessage.content}\n**Nuevo:** ${newMessage.content}`)
+        .setColor(0xFFA500)
+        .setTimestamp();
+    logChannel.send({ embeds: [embed] });
+});
+
+client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
+    const logChannel = newMember.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    // Detectar cambios de roles
+    const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
+    const removedRoles = oldMember.roles.cache.filter(role => !newMember.roles.cache.has(role.id));
+
+    if (addedRoles.size > 0) {
+        logChannel.send({
+            embeds: [new EmbedBuilder()
+                .setTitle("🛡️ Roles Añadidos")
+                .setDescription(`**Usuario:** ${newMember.user.tag}\n**Roles:** ${addedRoles.map(r => r.name).join(", ")}`)
+                .setColor(0x00FF00)
+                .setTimestamp()]
+        });
+    }
+    if (removedRoles.size > 0) {
+        logChannel.send({
+            embeds: [new EmbedBuilder()
+                .setTitle("🛡️ Roles Eliminados")
+                .setDescription(`**Usuario:** ${newMember.user.tag}\n**Roles:** ${removedRoles.map(r => r.name).join(", ")}`)
+                .setColor(0xFF0000)
+                .setTimestamp()]
+        });
+    }
+});
+
+// ===== BIENVENIDAS =====
+client.on(Events.GuildMemberAdd, async member => {
+    const channel = member.guild.channels.cache.get(CANAL_BIENVENIDAS);
+    if (!channel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("👋 ¡Nuevo miembro!")
+        .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐺`)
+        .setColor(0x00FF00)
+        .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setFooter({ text: `Eres el miembro #${member.guild.memberCount}` })
+        .setTimestamp();
+    
+    channel.send({ content: `¡Bienvenido <@${member.id}>!`, embeds: [embed] });
+});
+
+// ===== REACCIONES ROLES =====
+client.on("messageReactionAdd", async (reaction, user) => {
+  if (user.bot) return;
+  if (reaction.partial) await reaction.fetch();
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  
+  // Lógica Roles Clases (Antiguo)
+  if (reaction.message.channel.id === CANAL_ROLES && ROLES_REACCIONES[reaction.emoji.name]) {
+      const roleId = ROLES_REACCIONES[reaction.emoji.name];
+      const rolesSistema = Object.values(ROLES_REACCIONES);
+
+      const yaTieneOtro = rolesSistema.some(id =>
+        id !== roleId && member.roles.cache.has(id)
+      );
+
+      if (yaTieneOtro) {
+        await reaction.users.remove(user.id).catch(() => {});
+        const aviso = await reaction.message.channel.send({
+          content: `❌ <@${user.id}> Solo puedes tener **un rol** de clase a la vez.`
+        });
+        setTimeout(() => aviso.delete().catch(() => {}), 4000);
+        return;
+      }
+
+      await member.roles.add(roleId).catch(() => {});
+      const rol = reaction.message.guild.roles.cache.get(roleId);
+      const m = await reaction.message.channel.send(`✅ Rol **${rol.name}** asignado.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
+  }
+
+  // Lógica Roles Notificaciones (NUEVO)
+  if (reaction.message.channel.id === CANAL_ROLES && ROLES_NOTIF[reaction.emoji.name]) {
+      const roleId = ROLES_NOTIF[reaction.emoji.name];
+      await member.roles.add(roleId).catch(() => {});
+      const rol = reaction.message.guild.roles.cache.get(roleId);
+      const m = await reaction.message.channel.send(`✅ Rol **${rol.name}** asignado.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
+  }
+});
+
+client.on("messageReactionRemove", async (reaction, user) => {
+  if (user.bot) return;
+  if (reaction.partial) await reaction.fetch();
+  if (reaction.message.channel.id !== CANAL_ROLES) return;
+
+  const member = await reaction.message.guild.members.fetch(user.id);
+  
+  // Remover rol clase
+  if (ROLES_REACCIONES[reaction.emoji.name]) {
+      await member.roles.remove(ROLES_REACCIONES[reaction.emoji.name]).catch(() => {});
+  }
+  // Remover rol notif
+  if (ROLES_NOTIF[reaction.emoji.name]) {
+      await member.roles.remove(ROLES_NOTIF[reaction.emoji.name]).catch(() => {});
+  }
+
+  // VALIDACIÓN OBLIGATORIA (Notificaciones)
+  const tieneNotif = member.roles.cache.has(ROL_AVISOS) || member.roles.cache.has(ROL_DIRECTOS);
+  
+  if (!tieneNotif) {
+      const aviso = await reaction.message.channel.send({
+          content: `⚠️ <@${user.id}> Debes tener al menos **uno** de los roles de notificaciones (📢 Avisos o 🎥 Directos). Por favor reacciona de nuevo.`
+      });
+      setTimeout(() => aviso.delete().catch(() => {}), 6000);
+  }
+});
+
+// ===== AUTOMODERACIÓN Y MENSAJES =====
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return;
+
+  // Anti-Spam (5 mensajes idénticos)
+  const uid = message.author.id;
+  if (!msgTracker.has(uid)) msgTracker.set(uid, []);
+  let userMsgs = msgTracker.get(uid);
+  userMsgs.push({ content: message.content.toLowerCase(), time: Date.now() });
+  userMsgs = userMsgs.filter(m => Date.now() - m.time < 10000);
+  msgTracker.set(uid, userMsgs);
+
+  if (userMsgs.length >= 5) {
+    const spam = userMsgs.every(m => m.content === message.content.toLowerCase());
+    if (spam) {
+      await message.channel.bulkDelete(5).catch(() => {});
+      return message.channel.send(`🚫 No hagas spam, <@${uid}>.`).then(m => setTimeout(() => m.delete(), 4000));
+    }
+  }
+
+  // Responder menciones al bot
+  if (message.mentions.has(client.user)) {
+    return message.reply({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
+          .setDescription("Creado y personalizado desde 0 por el usuario **1fsi**.\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi**.")
+          .setColor(0x8B0000)
+          .setFooter({ text: "ColmillosDelAlba 2026" })
+      ]
+    });
+  }
+
+  if (!message.guild) {
+    const embedDM = new EmbedBuilder()
+      .setTitle("🤖 Información del Bot")
+      .setDescription("**Creado por 1fsi**\n\nVenta de bots personalizados.\nDiscord: **1fsi**")
+      .setColor(0x00AEFF);
+    await message.reply({ embeds: [embedDM] });
+    return;
+  }
+
+  if (message.channel.id === CANAL_AVISOS) {
+    await message.delete().catch(() => {});
+    const embedAviso = new EmbedBuilder()
+      .setTitle("🚨 AVISO IMPORTANTE 🚨")
+      .setDescription(message.content)
+      .setColor(0xFF0000)
+      .setImage(IMAGEN_FORMULARIO)
+      .setFooter({ text: `Publicado por ${message.author.tag}` })
+      .setTimestamp();
+    await message.channel.send({ content: `<@&${ROL_AVISOS}>`, embeds: [embedAviso] });
+  }
+});
+
+// ===== INTERACCIONES (COMANDOS Y TICKETS) =====
+client.on("interactionCreate", async (interaction) => {
+  if (interaction.isChatInputCommand()) {
+    const { commandName, options, guild, member } = interaction;
+
+    if (commandName === "info") {
+      return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
+            .setDescription("Creado y personalizado desde 0 por el usuario **1fsi.**\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi.**.")
+            .setColor(0x8B0000)
+            .setFooter({ text: "ColmillosDelAlba 2026" })
+        ]
+      });
+    }
+
+    if (commandName === "comandos") {
+      const embedComandos = new EmbedBuilder()
+        .setTitle("📜 Lista de Comandos")
+        .setDescription(`
+**Comandos Públicos:**
+• \`/info\`: Información del bot.
+• \`/comandos\`: Ver esta lista.
+• \`/jugar\`: Juego de adivinar número.
+• \`/reglas\`: Normas del clan.
+• \`/miembros\`: Estadísticas de usuarios.
+• \`/suggest\`: Enviar sugerencia.
+• \`/stats\`: Ver estadísticas.
+
+**Comandos de Staff:**
+• \`/clear [cantidad]\`: Borrar mensajes.
+• \`/role add [usuario] [rol]\`: Añadir rol a usuario.
+• \`/directo\`: Anunciar directo.
+• \`/mute\`: Mutear usuario.
+• \`/unmute\`: Desmutear usuario.
+• \`/chamba\`: Enviar mensaje decorado.
+• \`/anunciar\`: Mandar aviso oficial.
+• \`/kick\`: Expulsar usuario.
+• \`/ban\`: Banear usuario.
+• \`/warn\`: Advertir usuario.
+• \`/sorteo [premio] [duracion]\`: Iniciar sorteo (Staff).`)
+        .setColor(0x8B0000);
+      return interaction.reply({ embeds: [embedComandos] });
+    }
+
+    // ===== JUGAR =====
+    if (commandName === "jugar") {
+        const number = Math.floor(Math.random() * 100) + 1;
+        let attempts = 0;
+        let guessMessages = [];
+        const msgPrincipal = await interaction.reply({ content: `¡Hola <@${interaction.user.id}>! He pensado un número del 1 al 100. ¡Adivínalo!`, fetchReply: true });
+        guessMessages.push(msgPrincipal);
+        
+        const collector = interaction.channel.createMessageCollector({ time: 60000 });
+        collector.on('collect', async m => {
+            if (m.author.bot) return;
+            attempts++;
+            const guess = parseInt(m.content);
+            if (isNaN(guess)) return;
+            
+            guessMessages.push(m); // Guardar el mensaje del intento
+
+            if (guess === number) {
+                await m.reply(`🎉 ¡Correcto <@${m.author.id}>! Adivinaste el número **${number}** en ${attempts} intentos.`);
                 collector.stop();
             } else if (guess < number) {
-                m.reply('⬆️ Más alto.');
+                const reply = await m.reply('⬆️ Más alto.');
+                guessMessages.push(reply); // Guardar respuesta del bot
             } else {
-                m.reply('⬇️ Más bajo.');
+                const reply = await m.reply('⬇️ Más bajo.');
+                guessMessages.push(reply); // Guardar respuesta del bot
             }
         });
+
+        collector.on('end', async () => {
+            // Borrar todos los mensajes del juego
+            for (const msg of guessMessages) {
+                await msg.delete().catch(() => {});
+            }
+        });
+        
         return;
     }
 
@@ -781,7 +1207,7 @@ El ingreso no está garantizado.
 Se evaluará actitud, nivel, compromiso y comportamiento.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        ⚔  FORJAMOS LEALTAD Y PODER  ⚔
+      ⚔  FORJAMOS LEALTAD Y PODER  ⚔
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
       .setImage(IMAGEN_FORMULARIO);
