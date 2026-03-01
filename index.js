@@ -40,14 +40,32 @@ const msgTracker = new Map(); // Para el sistema de anti-spam
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
-  // Registro de todos los Slash Commands incluyendo el nuevo de comandos
+  // Registro de Slash Commands estructurados igual que los antiguos
   const commands = [
     { name: 'info', description: 'Información del bot' },
     { name: 'comandos', description: 'Ver lista completa de comandos' },
-    { name: 'jugar', description: 'Adivina el número del 1 al 100' }, // NUEVO
-    { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] }, // NUEVO
-    { name: 'directo', description: 'Anunciar directo', options: [{ name: 'enlace', description: 'Link del directo', type: 3, required: true }, { name: 'juego', description: 'Juego', type: 3, required: true }] }, // NUEVO
-    { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] }, // NUEVO
+    { name: 'jugar', description: 'Adivina el número del 1 al 100' },
+    { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] },
+    
+    // CAMBIO AQUÍ: Definición explícita de opciones para nuevo formato
+    { 
+        name: 'directo', 
+        description: 'Anunciar directo', 
+        options: [
+            { name: 'enlace', description: 'Link del directo', type: 3, required: true }, 
+            { name: 'juego', description: 'Juego', type: 3, required: true }
+        ] 
+    },
+    { 
+        name: 'mute', 
+        description: 'Mutea a un usuario', 
+        options: [
+            { name: 'usuario', description: 'Usuario', type: 6, required: true }, 
+            { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, 
+            { name: 'razon', description: 'Razón', type: 3 }
+        ] 
+    },
+    
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
     { name: 'top', description: 'Ver el top de miembros' },
@@ -59,7 +77,6 @@ client.once("ready", async () => {
     { name: 'warn', description: 'Advertir usuario', options: [{ name: 'usuario', description: 'Usuario a advertir', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] }
   ];
 
-  // IMPORTANTE: ESTA LÍNEA DEBERÍA ACTUALIZARLOS
   await client.application.commands.set(commands);
   console.log("Comandos slash actualizados en Discord.");
 
