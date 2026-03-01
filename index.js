@@ -7,7 +7,8 @@ const client = new Client({
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildPresences
+    GatewayIntentBits.GuildPresences,
+    GatewayIntentBits.GuildModeration // Necesario para logs de baneos/kicks
   ],
   partials: [Partials.Channel, Partials.Message, Partials.Reaction]
 });
@@ -15,7 +16,7 @@ const client = new Client({
 // ===== CONFIG =====
 const STAFF_ROLE_ID = "1463268597085507717";
 const CLAN_ROLE_ID = "1459687732417921227";
-const MUTE_ROLE_ID = "1477518735983251638"; // <--- ACTUALIZADO
+const MUTE_ROLE_ID = "1477518735983251638";
 const CANAL_INICIAL = "1476978880672956428";
 const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
@@ -23,8 +24,9 @@ const CANAL_AVISOS = "1462533102130958437";
 const CANAL_ROLES = "1464335122005491745";
 const CANAL_SUGERENCIAS = "1477005989096984646";
 const CANAL_COMANDOS = "1476614389749649523";
-const CANAL_BIENVENIDAS = "1459690080607146167"; // ID DE BIENVENIDAS
-const CANAL_DIRECTOS = "1477722071202004992"; // <--- NUEVO CANAL AVISOS LIVES
+const CANAL_BIENVENIDAS = "1459690080607146167";
+const CANAL_DIRECTOS = "1477722071202004992";
+const CANAL_LOGS = "1462534103063724062"; // <--- CANAL DE REGISTROS
 
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
@@ -36,38 +38,35 @@ const ROLES_REACCIONES = {
 };
 
 let mensajeRolesGlobal = null;
-const msgTracker = new Map(); // Para el sistema de anti-spam
+const msgTracker = new Map();
 
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
-  // Registro de Slash Commands estructurados igual que los antiguos
+  // Registro de Slash Commands actualizado
   const commands = [
     { name: 'info', description: 'Información del bot' },
     { name: 'comandos', description: 'Ver lista completa de comandos' },
     { name: 'jugar', description: 'Adivina el número del 1 al 100' },
     { name: 'chamba', description: 'Envía un mensaje de chamba', options: [{ name: 'mensaje', description: 'El mensaje a enviar', type: 3, required: true }] },
+    { name: 'directo', description: 'Anunciar directo', options: [{ name: 'enlace', description: 'Link del directo', type: 3, required: true }, { name: 'juego', description: 'Juego', type: 3, required: true }] },
+    { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
+    { name: 'unmute', description: 'Quita el mute a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }] },
     
-    // CAMBIO AQUÍ: Definición explícita de opciones para nuevo formato
-    { 
-        name: 'directo', 
-        description: 'Anunciar directo', 
-        options: [
-            { name: 'enlace', description: 'Link del directo', type: 3, required: true }, 
-            { name: 'juego', description: 'Juego', type: 3, required: true }
-        ] 
-    },
-    { 
-        name: 'mute', 
-        description: 'Mutea a un usuario', 
-        options: [
-            { name: 'usuario', description: 'Usuario', type: 6, required: true }, 
-            { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, 
-            { name: 'razon', description: 'Razón', type: 3 }
-        ] 
-    },
-    { name: 'unmute', description: 'Quita el mute a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }] }, // <--- NUEVO
-    
+    // NUEVOS COMANDOS SOLICITADOS
+    { name: 'clear', description: 'Borrar mensajes', options: [{ name: 'cantidad', description: 'Cantidad de mensajes a borrar', type: 4, required: true }] },
+    { name: 'role', description: 'Gestionar roles', options: [
+        { 
+            name: 'add', 
+            description: 'Añadir rol a un usuario', 
+            type: 1, 
+            options: [
+                { name: 'usuario', description: 'Usuario a gestionar', type: 6, required: true },
+                { name: 'rol', description: 'Rol a añadir', type: 8, required: true }
+            ]
+        }
+    ]},
+
     { name: 'miembros', description: 'Ver miembros online y estadísticas' },
     { name: 'reglas', description: 'Ver las normas del clan' },
     { name: 'top', description: 'Ver el top de miembros' },
@@ -125,7 +124,62 @@ client.once("ready", async () => {
   mensajeRolesGlobal = mensajeRoles;
 });
 
-// ===== BIENVENIDAS (NUEVO) =====
+// ===== SISTEMA DE LOGS (REGISTROS) =====
+client.on(Events.MessageDelete, async (message) => {
+    if (!message.guild || message.author?.bot) return;
+    const logChannel = message.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("🗑️ Mensaje Eliminado")
+        .setDescription(`**Autor:** ${message.author.tag} (${message.author.id})\n**Canal:** <#${message.channel.id}>\n**Mensaje:** ${message.content || "No hay texto"}`)
+        .setColor(0xFF0000)
+        .setTimestamp();
+    logChannel.send({ embeds: [embed] });
+});
+
+client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    if (!oldMessage.guild || oldMessage.author?.bot || oldMessage.content === newMessage.content) return;
+    const logChannel = oldMessage.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    const embed = new EmbedBuilder()
+        .setTitle("✏️ Mensaje Editado")
+        .setDescription(`**Autor:** ${oldMessage.author.tag}\n**Canal:** <#${oldMessage.channel.id}>\n**Antiguo:** ${oldMessage.content}\n**Nuevo:** ${newMessage.content}`)
+        .setColor(0xFFA500)
+        .setTimestamp();
+    logChannel.send({ embeds: [embed] });
+});
+
+client.on(Events.GuildMemberUpdate, async (oldMember, newMember) => {
+    const logChannel = newMember.guild.channels.cache.get(CANAL_LOGS);
+    if (!logChannel) return;
+
+    // Detectar cambios de roles
+    const addedRoles = newMember.roles.cache.filter(role => !oldMember.roles.cache.has(role.id));
+    const removedRoles = oldMember.roles.cache.filter(role => !newMember.roles.cache.has(role.id));
+
+    if (addedRoles.size > 0) {
+        logChannel.send({
+            embeds: [new EmbedBuilder()
+                .setTitle("🛡️ Roles Añadidos")
+                .setDescription(`**Usuario:** ${newMember.user.tag}\n**Roles:** ${addedRoles.map(r => r.name).join(", ")}`)
+                .setColor(0x00FF00)
+                .setTimestamp()]
+        });
+    }
+    if (removedRoles.size > 0) {
+        logChannel.send({
+            embeds: [new EmbedBuilder()
+                .setTitle("🛡️ Roles Eliminados")
+                .setDescription(`**Usuario:** ${newMember.user.tag}\n**Roles:** ${removedRoles.map(r => r.name).join(", ")}`)
+                .setColor(0xFF0000)
+                .setTimestamp()]
+        });
+    }
+});
+
+// ===== BIENVENIDAS =====
 client.on(Events.GuildMemberAdd, async member => {
     const channel = member.guild.channels.cache.get(CANAL_BIENVENIDAS);
     if (!channel) return;
@@ -195,7 +249,7 @@ client.on("messageReactionRemove", async (reaction, user) => {
   await member.roles.remove(roleId).catch(() => {});
 });
 
-// ===== AUTOMODERACIÓN Y MENSAJES (FILTRO DE MAYÚSCULAS ELIMINADO) =====
+// ===== AUTOMODERACIÓN Y MENSAJES =====
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -281,9 +335,11 @@ client.on("interactionCreate", async (interaction) => {
 • \`/stats\`: Ver estadísticas.
 
 **Comandos de Staff:**
-• \`/directo\`: Anunciar directo (Staff).
-• \`/mute\`: Mutear usuario (Staff).
-• \`/unmute\`: Desmutear usuario (Staff).
+• \`/clear\`: Borrar mensajes.
+• \`/role add\`: Añadir rol a usuario.
+• \`/directo\`: Anunciar directo.
+• \`/mute\`: Mutear usuario.
+• \`/unmute\`: Desmutear usuario.
 • \`/chamba\`: Enviar mensaje decorado.
 • \`/anunciar\`: Mandar aviso oficial.
 • \`/kick\`: Expulsar usuario.
@@ -293,7 +349,7 @@ client.on("interactionCreate", async (interaction) => {
       return interaction.reply({ embeds: [embedComandos] });
     }
 
-    // ===== JUGAR (NUEVO) =====
+    // ===== JUGAR =====
     if (commandName === "jugar") {
         const number = Math.floor(Math.random() * 100) + 1;
         let attempts = 0;
@@ -318,7 +374,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== CHAMBA (NUEVO) =====
+    // ===== CHAMBA =====
     if (commandName === "chamba") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const text = options.getString("mensaje");
@@ -335,7 +391,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== DIRECTO (ACTUALIZADO A CANAL ESPECIFICO) =====
+    // ===== DIRECTO =====
     if (commandName === "directo") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const enlace = options.getString("enlace");
@@ -356,7 +412,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== MUTE (ROL ACTUALIZADO) =====
+    // ===== MUTE =====
     if (commandName === "mute") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const target = options.getMember("usuario");
@@ -377,7 +433,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
 
-    // ===== UNMUTE (NUEVO) =====
+    // ===== UNMUTE =====
     if (commandName === "unmute") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const target = options.getMember("usuario");
@@ -388,6 +444,35 @@ client.on("interactionCreate", async (interaction) => {
 
         await target.roles.remove(muteRole);
         await interaction.reply({ embeds: [new EmbedBuilder().setTitle("🔊 Usuario Desmuteado").setDescription(`**Usuario:** ${target.user.tag}`).setColor(0x00FF00)] });
+        return;
+    }
+
+    // ===== CLEAR (NUEVO) =====
+    if (commandName === "clear") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        const amount = options.getInteger("cantidad");
+        if (amount < 1 || amount > 100) return interaction.reply({ content: "❌ Pon un número entre 1 y 100.", ephemeral: true });
+        
+        await interaction.channel.bulkDelete(amount, true);
+        const reply = await interaction.reply({ content: `✅ Eliminados **${amount}** mensajes.`, ephemeral: true });
+        setTimeout(() => reply.delete().catch(() => {}), 3000);
+        return;
+    }
+
+    // ===== ROLE ADD (NUEVO) =====
+    if (commandName === "role") {
+        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        
+        const subCommand = options.getSubcommand();
+        const target = options.getMember("usuario");
+        const role = options.getRole("rol");
+
+        if (subCommand === "add") {
+            if (!target || !role) return interaction.reply({ content: "❌ Datos inválidos.", ephemeral: true });
+            
+            await target.roles.add(role);
+            interaction.reply({ content: `✅ Rol **${role.name}** añadido a ${target.user.tag}.`, ephemeral: true });
+        }
         return;
     }
 
@@ -494,7 +579,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
     }
   }
 
-  // ===== LÓGICA DE BOTONES (TICKETS COMPLETO CON FORMULARIO) =====
+  // ===== LÓGICA DE BOTONES (TICKETS) =====
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "crear_ticket") {
@@ -570,7 +655,6 @@ Se evaluará actitud, nivel, compromiso y comportamiento.
     await interaction.reply({ content: "✅ Ticket creado.", ephemeral: true });
   }
 
-  // ACEPTAR / RECHAZAR / CERRAR
   if (interaction.customId === "aceptar_miembro" || interaction.customId === "rechazar_miembro") {
     if (!interaction.member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
     const userId = interaction.channel.name.replace("verificacion-", "");
