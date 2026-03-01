@@ -41,6 +41,12 @@ const ROLES_REACCIONES = {
   "🏛️": "1464335746856128737"
 };
 
+// NUEVOS ROLES DE NOTIFICACIONES (Reacciones)
+const ROLES_NOTIF = {
+  "📢": ROL_AVISOS,
+  "🎥": ROL_DIRECTOS
+};
+
 let mensajeRolesGlobal = null;
 const msgTracker = new Map();
 
@@ -114,9 +120,10 @@ client.once("ready", async () => {
 
   // ===== EMBED ROLES =====
   const canalRoles = await client.channels.fetch(CANAL_ROLES);
-  const mensajesRoles = await canalRoles.messages.fetch({ limit: 10 });
+  const mensajesRoles = await canalRoles.messages.fetch({ limit: 15 });
 
-  let mensajeRoles = mensajesRoles.find(m => m.author.id === client.user.id);
+  // MENSAJE 1: Roles de Clase
+  let mensajeRoles = mensajesRoles.find(m => m.author.id === client.user.id && m.embeds[0]?.title?.includes("Roles"));
 
   if (!mensajeRoles) {
     const embedRoles = new EmbedBuilder()
@@ -132,6 +139,21 @@ client.once("ready", async () => {
     }
   }
   mensajeRolesGlobal = mensajeRoles;
+
+  // MENSAJE 2: Roles de Notificaciones (NUEVO)
+  let mensajeNotif = mensajesRoles.find(m => m.author.id === client.user.id && m.embeds[0]?.title?.includes("Notificaciones"));
+  
+  if (!mensajeNotif) {
+      const embedNotif = new EmbedBuilder()
+        .setTitle("╔══ ≪ ° Notificaciones ° ≫ ══╗")
+        .setDescription(`Selecciona cómo quieres recibir las actualizaciones:\n\n📢 <@&${ROL_AVISOS}> - Avisos Generales\n🎥 <@&${ROL_DIRECTOS}> - Notificaciones de Directos\n\n*Obligatorio elegir al menos uno.*`)
+        .setColor(0x00FF00);
+
+      mensajeNotif = await canalRoles.send({ content: "@everyone", embeds: [embedNotif] });
+      for (const emoji of Object.keys(ROLES_NOTIF)) {
+          await mensajeNotif.react(emoji);
+      }
+  }
 });
 
 // ===== SISTEMA DE LOGS (REGISTROS) =====
@@ -205,46 +227,45 @@ client.on(Events.GuildMemberAdd, async member => {
     channel.send({ content: `¡Bienvenido <@${member.id}>!`, embeds: [embed] });
 });
 
-// ===== REACCIONES ORIGINALES =====
+// ===== REACCIONES ROLES =====
 client.on("messageReactionAdd", async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) await reaction.fetch();
-  if (reaction.message.channel.id !== CANAL_ROLES) return;
-
-  const roleId = ROLES_REACCIONES[reaction.emoji.name];
-  if (!roleId) return;
 
   const member = await reaction.message.guild.members.fetch(user.id);
-  const rolesSistema = Object.values(ROLES_REACCIONES);
+  
+  // Lógica Roles Clases (Antiguo)
+  if (reaction.message.channel.id === CANAL_ROLES && ROLES_REACCIONES[reaction.emoji.name]) {
+      const roleId = ROLES_REACCIONES[reaction.emoji.name];
+      const rolesSistema = Object.values(ROLES_REACCIONES);
 
-  const yaTieneOtro = rolesSistema.some(id =>
-    id !== roleId && member.roles.cache.has(id)
-  );
+      const yaTieneOtro = rolesSistema.some(id =>
+        id !== roleId && member.roles.cache.has(id)
+      );
 
-  if (yaTieneOtro) {
-    await reaction.users.remove(user.id).catch(() => {});
-    const aviso = await reaction.message.channel.send({
-      content: `❌ <@${user.id}> Solo puedes tener **un rol** a la vez.`
-    });
-    setTimeout(() => { aviso.delete().catch(() => {}); }, 4000);
-    return;
+      if (yaTieneOtro) {
+        await reaction.users.remove(user.id).catch(() => {});
+        const aviso = await reaction.message.channel.send({
+          content: `❌ <@${user.id}> Solo puedes tener **un rol** de clase a la vez.`
+        });
+        setTimeout(() => { aviso.delete().catch(() => {}); }, 4000);
+        return;
+      }
+
+      await member.roles.add(roleId).catch(() => {});
+      const rol = reaction.message.guild.roles.cache.get(roleId);
+      const m = await reaction.message.channel.send(`✅ Rol **${rol.name}** asignado.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
   }
 
-  await member.roles.add(roleId).catch(() => {});
-  const rol = reaction.message.guild.roles.cache.get(roleId);
-
-  const embedConfirmacion = new EmbedBuilder()
-    .setTitle("⚔️ Rol Asignado")
-    .setDescription(`Has elegido el rol **${rol.name}** y se te ha añadido correctamente.\n\nAtt: ColmillosDelAlba Administración`)
-    .setColor(0x00FF00)
-    .setTimestamp();
-
-  const mensajeConfirmacion = await reaction.message.channel.send({
-    content: `<@${user.id}>`,
-    embeds: [embedConfirmacion]
-  });
-
-  setTimeout(() => { mensajeConfirmacion.delete().catch(() => {}); }, 5000);
+  // Lógica Roles Notificaciones (NUEVO)
+  if (reaction.message.channel.id === CANAL_ROLES && ROLES_NOTIF[reaction.emoji.name]) {
+      const roleId = ROLES_NOTIF[reaction.emoji.name];
+      await member.roles.add(roleId).catch(() => {});
+      const rol = reaction.message.guild.roles.cache.get(roleId);
+      const m = await reaction.message.channel.send(`✅ Rol **${rol.name}** asignado.`);
+      setTimeout(() => m.delete().catch(() => {}), 4000);
+  }
 });
 
 client.on("messageReactionRemove", async (reaction, user) => {
@@ -252,11 +273,26 @@ client.on("messageReactionRemove", async (reaction, user) => {
   if (reaction.partial) await reaction.fetch();
   if (reaction.message.channel.id !== CANAL_ROLES) return;
 
-  const roleId = ROLES_REACCIONES[reaction.emoji.name];
-  if (!roleId) return;
-
   const member = await reaction.message.guild.members.fetch(user.id);
-  await member.roles.remove(roleId).catch(() => {});
+  
+  // Remover rol clase
+  if (ROLES_REACCIONES[reaction.emoji.name]) {
+      await member.roles.remove(ROLES_REACCIONES[reaction.emoji.name]).catch(() => {});
+  }
+  // Remover rol notif
+  if (ROLES_NOTIF[reaction.emoji.name]) {
+      await member.roles.remove(ROLES_NOTIF[reaction.emoji.name]).catch(() => {});
+  }
+
+  // VALIDACIÓN OBLIGATORIA (Notificaciones)
+  const tieneNotif = member.roles.cache.has(ROL_AVISOS) || member.roles.cache.has(ROL_DIRECTOS);
+  
+  if (!tieneNotif) {
+      const aviso = await reaction.message.channel.send({
+          content: `⚠️ <@${user.id}> Debes tener al menos **uno** de los roles de notificaciones (📢 Avisos o 🎥 Directos). Por favor reacciona de nuevo.`
+      });
+      setTimeout(() => aviso.delete().catch(() => {}), 6000);
+  }
 });
 
 // ===== AUTOMODERACIÓN Y MENSAJES =====
@@ -310,7 +346,7 @@ client.on("messageCreate", async (message) => {
       .setImage(IMAGEN_FORMULARIO)
       .setFooter({ text: `Publicado por ${message.author.tag}` })
       .setTimestamp();
-    await message.channel.send({ embeds: [embedAviso] });
+    await message.channel.send({ content: `<@&${ROL_AVISOS}>`, embeds: [embedAviso] });
   }
 });
 
