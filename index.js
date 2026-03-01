@@ -19,6 +19,8 @@ const CATEGORIA_TICKETS = "1477154960343826512";
 const CATEGORIA_HISTORIAL = "1476973773579092151";
 const CANAL_AVISOS = "1462533102130958437";
 const CANAL_ROLES = "1464335122005491745";
+const CANAL_SUGERENCIAS = "1477005989096984646";
+const CANAL_COMANDOS = "1476614389749649523";
 
 const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
 
@@ -80,6 +82,19 @@ client.once("ready", async () => {
   }
 
   mensajeRolesGlobal = mensajeRoles;
+    // ===== REGISTRAR COMANDO /suggest =====
+  await client.application.commands.create({
+    name: "suggest",
+    description: "Enviar una sugerencia al servidor",
+    options: [
+      {
+        name: "texto",
+        description: "Escribe tu sugerencia",
+        type: 3,
+        required: true
+      }
+    ]
+  });
 });
 
 // ===== REACCIONES (MODIFICADO SOLO ESTO) =====
@@ -178,6 +193,41 @@ client.on("messageCreate", async (message) => {
 });
 
 client.on("interactionCreate", async (interaction) => {
+    if (interaction.isChatInputCommand()) {
+
+    if (interaction.commandName === "suggest") {
+
+      if (interaction.channel.id !== CANAL_COMANDOS) {
+        return interaction.reply({
+          content: "❌ Este comando solo se puede usar en el canal de comandos.",
+          ephemeral: true
+        });
+      }
+
+      const texto = interaction.options.getString("texto");
+
+      const canalSugerencias = await client.channels.fetch(CANAL_SUGERENCIAS);
+
+      const embedSugerencia = new EmbedBuilder()
+        .setTitle("📌 Nueva Sugerencia")
+        .setDescription(texto)
+        .setColor(0x8B0000)
+        .setFooter({ text: `Sugerido por ${interaction.user.tag}` })
+        .setTimestamp();
+
+      const mensaje = await canalSugerencias.send({
+        embeds: [embedSugerencia]
+      });
+
+      await mensaje.react("👍");
+      await mensaje.react("👎");
+
+      await interaction.reply({
+        content: "✅ Tu sugerencia fue enviada correctamente.",
+        ephemeral: true
+      });
+    }
+  }
   if (!interaction.isButton()) return;
 
   if (interaction.customId === "crear_ticket") {
