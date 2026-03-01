@@ -82,6 +82,7 @@ client.once("ready", async () => {
   }
 
   mensajeRolesGlobal = mensajeRoles;
+
 // ===== REGISTRAR COMANDO /info =====
 await client.application.commands.create({
   name: "info",
@@ -101,17 +102,6 @@ await client.application.commands.create({
     }
   ]
 });
-    name: "suggest",
-    description: "Enviar una sugerencia al servidor",
-    options: [
-      {
-        name: "texto",
-        description: "Escribe tu sugerencia",
-        type: 3,
-        required: true
-      }
-    ]
-  });
 });
 
 // ===== REACCIONES (MODIFICADO SOLO ESTO) =====
