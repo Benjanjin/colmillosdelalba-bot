@@ -429,7 +429,7 @@ client.on("interactionCreate", async (interaction) => {
         
         const text = options.getString("mensaje");
         const embedChamba = new EmbedBuilder()
-            .setTitle("📢 AVISO DE GUEPAR")
+            .setTitle("📢 MENSSAJE OFICIAL DE GUEPAR")
             .setDescription(text)
             .setColor(0xFFFF00)
             .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png")
