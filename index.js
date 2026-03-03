@@ -8,7 +8,7 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildPresences,
-    GatewayIntentBits.GuildModeration // Necesario para logs de baneos/kicks
+    GatewayIntentBits.GuildModeration 
   ],
   partials: [Partials.Channel, Partials.Message, Partials.Reaction]
 });
@@ -26,7 +26,7 @@ const CANAL_SUGERENCIAS = "1477005989096984646";
 const CANAL_COMANDOS = "1476614389749649523";
 const CANAL_BIENVENIDAS = "1459690080607146167";
 const CANAL_DIRECTOS = "1477722071202004992";
-const CANAL_LOGS = "1462534103063724062"; // <--- CANAL DE REGISTROS
+const CANAL_LOGS = "1462534103063724062"; 
 
 // IDs DE ROLES PARA MENCIONES
 const ROL_AVISOS = "1477748637202382888";
@@ -41,7 +41,7 @@ const ROLES_REACCIONES = {
   "🏛️": "1464335746856128737"
 };
 
-// NUEVOS ROLES DE NOTIFICACIONES (Reacciones)
+// NUEVOS ROLES DE NOTIFICACIONES 
 const ROLES_NOTIF = {
   "📢": ROL_AVISOS,
   "🎥": ROL_DIRECTOS
@@ -53,7 +53,7 @@ const msgTracker = new Map();
 client.once("ready", async () => {
   console.log(`Bot listo como ${client.user.tag}`);
 
-  // Registro de Slash Commands actualizado
+  // Registro de Comandos
   const commands = [
     { name: 'info', description: 'Información del bot' },
     { name: 'comandos', description: 'Ver lista completa de comandos' },
@@ -63,7 +63,7 @@ client.once("ready", async () => {
     { name: 'mute', description: 'Mutea a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }, { name: 'tiempo', description: 'Tiempo (min)', type: 4, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
     { name: 'unmute', description: 'Quita el mute a un usuario', options: [{ name: 'usuario', description: 'Usuario', type: 6, required: true }] },
     
-    // NUEVOS COMANDOS SOLICITADOS
+    // NUEVOS COMANDOS
     { name: 'clear', description: 'Borrar mensajes', options: [{ name: 'cantidad', description: 'Cantidad de mensajes a borrar', type: 4, required: true }] },
     { name: 'role', description: 'Gestionar roles', options: [
         { 
@@ -87,7 +87,7 @@ client.once("ready", async () => {
     { name: 'ban', description: 'Banear usuario', options: [{ name: 'usuario', description: 'Usuario a banear', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
     { name: 'warn', description: 'Advertir usuario', options: [{ name: 'usuario', description: 'Usuario a advertir', type: 6, required: true }, { name: 'razon', description: 'Razón', type: 3 }] },
     
-    // COMANDO SORTEO AÑADIDO
+    // COMANDO SORTEO 
     { name: 'sorteo', description: 'Iniciar un sorteo', options: [
         { name: 'premio', description: '¿Qué se sortea?', type: 3, required: true },
         { name: 'duracion', description: 'Duración en minutos', type: 4, required: true }
@@ -140,7 +140,7 @@ client.once("ready", async () => {
   }
   mensajeRolesGlobal = mensajeRoles;
 
-  // MENSAJE 2: Roles de Notificaciones (NUEVO)
+  // MENSAJE 2: Roles de Notificaciones
   let mensajeNotif = mensajesRoles.find(m => m.author.id === client.user.id && m.embeds[0]?.title?.includes("Notificaciones"));
   
   if (!mensajeNotif) {
@@ -156,7 +156,7 @@ client.once("ready", async () => {
   }
 });
 
-// ===== SISTEMA DE LOGS (REGISTROS) =====
+// ===== SISTEMA DE LOGS dyno =====
 client.on(Events.MessageDelete, async (message) => {
     if (!message.guild || message.author?.bot) return;
     const logChannel = message.guild.channels.cache.get(CANAL_LOGS);
@@ -235,7 +235,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
 
   const member = await reaction.message.guild.members.fetch(user.id);
   
-  // Lógica Roles Clases (Antiguo)
+  // Lógica Roles Clases
   if (reaction.message.channel.id === CANAL_ROLES && ROLES_REACCIONES[reaction.emoji.name]) {
       const roleId = ROLES_REACCIONES[reaction.emoji.name];
       const rolesSistema = Object.values(ROLES_REACCIONES);
@@ -259,7 +259,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
       setTimeout(() => m.delete().catch(() => {}), 4000);
   }
 
-  // Lógica Roles Notificaciones (NUEVO)
+  // Lógica Roles Notificaciones
   if (reaction.message.channel.id === CANAL_ROLES && ROLES_NOTIF[reaction.emoji.name]) {
       const roleId = ROLES_NOTIF[reaction.emoji.name];
       await member.roles.add(roleId).catch(() => {});
@@ -296,7 +296,7 @@ client.on("messageReactionRemove", async (reaction, user) => {
   }
 });
 
-// ===== AUTOMODERACIÓN Y MENSAJES =====
+// ===== AUTOMODERACIÓN =====
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
@@ -399,7 +399,7 @@ client.on("interactionCreate", async (interaction) => {
             const guess = parseInt(m.content);
             if (isNaN(guess)) return;
             
-            guessMessages.push(m); // Guardar el mensaje del intento
+            guessMessages.push(m); 
 
             if (guess === number) {
                 await m.reply(`🎉 ¡Correcto <@${m.author.id}>! Adivinaste el número **${number}** en ${attempts} intentos.`);
@@ -429,7 +429,7 @@ client.on("interactionCreate", async (interaction) => {
         
         const text = options.getString("mensaje");
         const embedChamba = new EmbedBuilder()
-            .setTitle("📢 MENSSAJE OFICIAL DE GUEPAR")
+            .setTitle("📢 MENSAJE OFICIAL DE GUEPAR")
             .setDescription(text)
             .setColor(0xFFFF00)
             .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png")
@@ -661,7 +661,7 @@ Discord: ColmillosdelAlba | Minecraft: dioses.mc (Vegetta y Willy)
         return interaction.reply({ content: "📊 Comando en desarrollo.", ephemeral: true });
     }
 
-    // ===== LÓGICA COMANDO /SORTEO (MEJORADA) =====
+    // ===== LÓGICA COMANDO /SORTEO  =====
     if (commandName === "sorteo") {
         if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
         const premio = options.getString("premio");
@@ -787,7 +787,7 @@ Se evaluará actitud, nivel, compromiso y comportamiento.
       ⚔  FORJAMOS LEALTAD Y PODER  ⚔
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
-      .setImage("https://i.imgur.com/vpR9rSJ.png"); // <--- Aquí termina el Embed
+      .setImage("https://i.imgur.com/vpR9rSJ.png"); 
 
     const aceptar = new ButtonBuilder().setCustomId("aceptar_miembro").setLabel("Aceptar Miembro").setStyle(ButtonStyle.Success);
     const rechazar = new ButtonBuilder().setCustomId("rechazar_miembro").setLabel("Rechazar Miembro").setStyle(ButtonStyle.Danger);
