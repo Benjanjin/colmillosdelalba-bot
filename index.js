@@ -221,7 +221,7 @@ client.on(Events.GuildMemberAdd, async member => {
         .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐉`) 
         .setColor(0x00FF00)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-        .setImage("https://i.imgur.com/vpR9rSJ.png") 
+        .setImage("https://i.imgur.com/BFAmZ4A.jpg") 
         .setFooter({ text: `Eres el miembro #${member.guild.memberCount}` })
         .setTimestamp();
     
@@ -300,7 +300,7 @@ client.on("messageReactionRemove", async (reaction, user) => {
 client.on("messageCreate", async (message) => {
   if (message.author.bot) return;
 
-  // Anti-Spam (5 mensajes idénticos)
+  // Anti-Spam (5 mensajes)
   const uid = message.author.id;
   if (!msgTracker.has(uid)) msgTracker.set(uid, []);
   let userMsgs = msgTracker.get(uid);
@@ -406,10 +406,10 @@ client.on("interactionCreate", async (interaction) => {
                 collector.stop();
             } else if (guess < number) {
                 const reply = await m.reply('⬆️ Más alto.');
-                guessMessages.push(reply); // Guardar respuesta del bot
+                guessMessages.push(reply); 
             } else {
                 const reply = await m.reply('⬇️ Más bajo.');
-                guessMessages.push(reply); // Guardar respuesta del bot
+                guessMessages.push(reply); 
             }
         });
 
