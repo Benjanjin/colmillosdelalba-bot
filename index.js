@@ -787,7 +787,7 @@ Se evaluará actitud, nivel, compromiso y comportamiento.
       ⚔  FORJAMOS LEALTAD Y PODER  ⚔
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
-      .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png"); // <--- Aquí termina el Embed
+      .setImage("https://i.imgur.com/vpR9rSJ.png"); // <--- Aquí termina el Embed
 
     const aceptar = new ButtonBuilder().setCustomId("aceptar_miembro").setLabel("Aceptar Miembro").setStyle(ButtonStyle.Success);
     const rechazar = new ButtonBuilder().setCustomId("rechazar_miembro").setLabel("Rechazar Miembro").setStyle(ButtonStyle.Danger);
