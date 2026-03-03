@@ -216,11 +216,12 @@ client.on(Events.GuildMemberAdd, async member => {
     const channel = member.guild.channels.cache.get(CANAL_BIENVENIDAS);
     if (!channel) return;
 
-    const embed = new EmbedBuilder()
+  const embed = new EmbedBuilder()
         .setTitle("👋 ¡Nuevo miembro!")
-        .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐺`)
+        .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐉`) 
         .setColor(0x00FF00)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
+        .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png") 
         .setFooter({ text: `Eres el miembro #${member.guild.memberCount}` })
         .setTimestamp();
     
@@ -313,19 +314,6 @@ client.on("messageCreate", async (message) => {
       await message.channel.bulkDelete(5).catch(() => {});
       return message.channel.send(`🚫 No hagas spam, <@${uid}>.`).then(m => setTimeout(() => m.delete(), 4000));
     }
-  }
-
-  // Responder menciones al bot
-  if (message.mentions.has(client.user)) {
-    return message.reply({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle("🐺 Bot Del Clan ColmillosDelAlba")
-          .setDescription("Creado y personalizado desde 0 por el usuario **1fsi**.\n\nSi te interesa crear tu bot, manda soli al DM de **1fsi**.")
-          .setColor(0x8B0000)
-          .setFooter({ text: "ColmillosDelAlba 2026" })
-      ]
-    });
   }
 
   if (!message.guild) {
@@ -437,17 +425,18 @@ client.on("interactionCreate", async (interaction) => {
 
     // ===== CHAMBA =====
     if (commandName === "chamba") {
-        if (!member.roles.cache.has(STAFF_ROLE_ID)) return interaction.reply({ content: "❌ Sin permisos.", ephemeral: true });
+        if (interaction.user.id !== "777529808325181460") return interaction.reply({ content: "❌ Solo guepar__ puede usar este comando.", ephemeral: true });
+        
         const text = options.getString("mensaje");
         const embedChamba = new EmbedBuilder()
-            .setTitle("🔨 AVISO DE CHAMBA 🔨")
+            .setTitle("📢 AVISO DE GUEPAR")
             .setDescription(text)
             .setColor(0xFFFF00)
-            .setImage(IMAGEN_FORMULARIO)
-            .setFooter({ text: "Att: El esclavizador" })
+            .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png")
+            .setFooter({ text: "Att: guepar__" })
             .setTimestamp();
         
-        await interaction.reply({ content: "✅ Mensaje de chamba enviado.", ephemeral: true });
+        await interaction.reply({ content: "✅ Aviso enviado.", ephemeral: true });
         await interaction.channel.send({ embeds: [embedChamba] });
         return;
     }
@@ -798,7 +787,7 @@ Se evaluará actitud, nivel, compromiso y comportamiento.
       ⚔  FORJAMOS LEALTAD Y PODER  ⚔
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
       .setColor(0x8B0000)
-      .setImage(IMAGEN_FORMULARIO);
+      .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png"); // <--- Aquí termina el Embed
 
     const aceptar = new ButtonBuilder().setCustomId("aceptar_miembro").setLabel("Aceptar Miembro").setStyle(ButtonStyle.Success);
     const rechazar = new ButtonBuilder().setCustomId("rechazar_miembro").setLabel("Rechazar Miembro").setStyle(ButtonStyle.Danger);
