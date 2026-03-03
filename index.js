@@ -32,7 +32,7 @@ const CANAL_LOGS = "1462534103063724062"; // <--- CANAL DE REGISTROS
 const ROL_AVISOS = "1477748637202382888";
 const ROL_DIRECTOS = "1477748975603023873";
 
-const IMAGEN_FORMULARIO = "https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e";
+const IMAGEN_FORMULARIO = "https://i.imgur.com/vpR9rSJ.png";
 
 const ROLES_REACCIONES = {
   "⚔️": "1464335696390263069",
@@ -221,7 +221,7 @@ client.on(Events.GuildMemberAdd, async member => {
         .setDescription(`¡Bienvenido al **Clan ColmillosDelAlba** <@${member.id}>!\nPasala bien!! 🐉`) 
         .setColor(0x00FF00)
         .setThumbnail(member.user.displayAvatarURL({ dynamic: true }))
-        .setImage("https://cdn.discordapp.com/attachments/1473185415056855064/1476005469670608987/00c06809-480f-4798-940e-41a5118e.png") 
+        .setImage("https://i.imgur.com/vpR9rSJ.png") 
         .setFooter({ text: `Eres el miembro #${member.guild.memberCount}` })
         .setTimestamp();
     
